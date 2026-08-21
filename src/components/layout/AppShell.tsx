@@ -25,19 +25,19 @@ export function AppShell({ children }: AppShellProps) {
   const title = titleMap[location.pathname] || 'Dashboard'
 
   return (
-    <div className="min-h-screen">
-      {/* Sidebar — fixed, always visible on desktop */}
-      <div className="hidden lg:block fixed top-0 left-0 w-[272px] h-screen z-40">
+    <div className="app">
+      {/* Desktop sidebar — sticky, in document flow (matches original HTML) */}
+      <div className="sidebar-desktop">
         <Sidebar isOpen={true} onClose={() => {}} mode="desktop" />
       </div>
 
       {/* Mobile sidebar overlay */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} mode="mobile" />
 
-      {/* Main content — shifted right on desktop via margin */}
-      <div className="min-h-screen lg:ml-[272px] bg-[#F5F0E8] bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(26,92,88,0.06),transparent),radial-gradient(900px_500px_at_-10%_110%,rgba(212,132,26,0.05),transparent)]">
+      {/* Main column */}
+      <div className="main">
         <Topbar onMenuClick={() => setSidebarOpen(true)} title={title} />
-        <main className="p-4 lg:p-8 max-w-[1600px]">
+        <main className="content">
           {children}
         </main>
       </div>

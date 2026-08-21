@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { RefreshCw, Filter, Download, Printer, ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { RefreshCw, Download, Printer } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
 const orders = [
   { id: '#4523', client: 'Amara K.', avatar: 'A', vendor: 'Marina Fresh', status: 'in_wash', total: 45000, date: '2024-01-15' },
@@ -16,29 +15,28 @@ const orders = [
   { id: '#4514', client: 'Omar N.', avatar: 'O', vendor: 'Crisp Corner', status: 'ready', total: 44000, date: '2024-01-14' },
 ]
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  in_wash: 'bg-blue-100 text-blue-700',
-  ready: 'bg-green-100 text-green-700',
-  out_for_delivery: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-red-100 text-red-700',
-  refunded: 'bg-gray-100 text-gray-700',
+const statusColors: Record<string, { bg: string; fg: string }> = {
+  pending: { bg: '#FDF3E3', fg: '#D4841A' },
+  in_wash: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  ready: { bg: '#DFF5ED', fg: '#1A7A5C' },
+  out_for_delivery: { bg: '#FDE8D4', fg: '#CF6A2C' },
+  delivered: { bg: '#DFF5ED', fg: '#1A7A5C' },
+  cancelled: { bg: '#F3D5CE', fg: '#C0553F' },
+  refunded: { bg: '#F1F5F9', fg: '#64748B' },
 }
 
 const stats = [
-  { label: 'Orders Today', value: '128', color: '#1A5C58' },
-  { label: 'Revenue Today', value: formatCurrency(24400000), color: '#D4841A' },
-  { label: 'In Wash', value: '34', color: '#3B82F6' },
-  { label: 'Unassigned', value: '8', color: '#C0553F' },
-  { label: 'Out for Delivery', value: '21', color: '#8B5CF6' },
-  { label: 'Refunded', value: '3', color: '#64748B' },
+  { label: 'Orders Today', value: '128', color: '#E8F2F1' },
+  { label: 'Revenue Today', value: 'TZS 24.4M', color: '#FDF3E3' },
+  { label: 'In Wash', value: '34', color: '#E3EEFF' },
+  { label: 'Unassigned', value: '8', color: '#F3D5CE' },
+  { label: 'Out for Delivery', value: '21', color: '#FDE8D4' },
+  { label: 'Refunded', value: '3', color: '#F1F5F9' },
 ]
 
 export default function OrdersPage() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedVendor, setSelectedVendor] = useState('all')
-  const [showFilters, setShowFilters] = useState(false)
 
   const filteredOrders = orders.filter((order) => {
     if (selectedStatus !== 'all' && order.status !== selectedStatus) return false
@@ -47,151 +45,147 @@ export default function OrdersPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Operations"
-        title="Orders"
-        description="Manage and track all orders"
-        action={
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 text-sm text-[#64748B] hover:text-[#2C3E50] hover:bg-white rounded-lg border border-[#E2E8F0] transition-colors">
-              <RefreshCw size={16} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors',
-                showFilters
-                  ? 'bg-[#1A5C58] text-white border-[#1A5C58]'
-                  : 'text-[#64748B] hover:text-[#2C3E50] hover:bg-white border-[#E2E8F0]'
-              )}
-            >
-              <Filter size={16} />
-              <span className="hidden sm:inline">Filter</span>
-            </button>
-            <button className="flex items-center gap-2 px-3 py-2 text-sm text-[#64748B] hover:text-[#2C3E50] hover:bg-white rounded-lg border border-[#E2E8F0] transition-colors">
-              <Download size={16} />
-              <span className="hidden sm:inline">CSV</span>
-            </button>
-            <button className="flex items-center gap-2 px-3 py-2 text-sm text-[#64748B] hover:text-[#2C3E50] hover:bg-white rounded-lg border border-[#E2E8F0] transition-colors">
-              <Printer size={16} />
-              <span className="hidden sm:inline">Print</span>
-            </button>
-          </div>
-        }
-      />
+    <div>
+      {/* Title card (matches original) */}
+      <div className="title-card">
+        <ol className="breadcrumb" style={{ margin: 0, padding: 0 }}>
+          <li><a href="/" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Home</a></li>
+          <li className="sep">/</li>
+          <li className="current">Orders</li>
+        </ol>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+            fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+            border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+          }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+            fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+            border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+          }}>
+            <Download size={14} /> CSV
+          </button>
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+            fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+            border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+          }}>
+            <Printer size={14} /> Print
+          </button>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Stat tiles (matches original) */}
+      <div className="stat-grid">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-sm">
-            <p className="text-xs text-[#64748B]">{stat.label}</p>
-            <p className="text-lg font-bold mt-1" style={{ color: stat.color }}>{stat.value}</p>
+          <div key={stat.label} className="stat-tile" style={{ '--tile-bg': stat.color } as React.CSSProperties}>
+            <div className="st-value">{stat.value}</div>
+            <div className="st-label">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {showFilters && (
-        <div className="bg-white rounded-xl border border-[#E2E8F0] p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-[#64748B] mb-1.5">Status</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="in_wash">In Wash</option>
-                <option value="ready">Ready</option>
-                <option value="out_for_delivery">Out for Delivery</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-[#64748B] mb-1.5">Vendor</label>
-              <select
-                value={selectedVendor}
-                onChange={(e) => setSelectedVendor(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-              >
-                <option value="all">All Vendors</option>
-                <option value="Marina Fresh">Marina Fresh</option>
-                <option value="Bright & Fold">Bright & Fold</option>
-                <option value="Crisp Corner">Crisp Corner</option>
-              </select>
-            </div>
+      {/* Filter bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+        background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 14,
+        boxShadow: '0 1px 2px rgba(15,23,34,0.05), 0 1px 1px rgba(15,23,34,0.03)',
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Status</label>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            style={{
+              width: '100%', height: 36, borderRadius: 9, border: '1px solid #EDE7D9',
+              padding: '4px 10px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
+              outline: 'none',
+            }}
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="in_wash">In Wash</option>
+            <option value="ready">Ready</option>
+            <option value="out_for_delivery">Out for Delivery</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="refunded">Refunded</option>
+          </select>
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Vendor</label>
+          <select
+            value={selectedVendor}
+            onChange={(e) => setSelectedVendor(e.target.value)}
+            style={{
+              width: '100%', height: 36, borderRadius: 9, border: '1px solid #EDE7D9',
+              padding: '4px 10px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
+              outline: 'none',
+            }}
+          >
+            <option value="all">All Vendors</option>
+            <option value="Marina Fresh">Marina Fresh</option>
+            <option value="Bright & Fold">Bright & Fold</option>
+            <option value="Crisp Corner">Crisp Corner</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Data table (matches original) */}
+      <div className="data-table-card">
+        <div className="dt-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="dt-title">Orders</span>
+            <span className="dt-sub">{filteredOrders.length} records</span>
           </div>
         </div>
-      )}
-
-      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">
-                  <input type="checkbox" className="rounded border-[#E2E8F0]" />
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Order ID</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Client</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Vendor</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Status</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Total</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="border-b border-[#E2E8F0]/50 last:border-0 hover:bg-[#F8FAFC] transition-colors">
-                  <td className="py-3 px-4">
-                    <input type="checkbox" className="rounded border-[#E2E8F0]" />
-                  </td>
-                  <td className="py-3 px-4 text-sm font-medium text-[#2C3E50]">{order.id}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#1A5C58]/10 flex items-center justify-center">
-                        <span className="text-xs font-medium text-[#1A5C58]">{order.avatar}</span>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th><input type="checkbox" style={{ accentColor: '#1A5C58' }} /></th>
+              <th>Order</th>
+              <th>Client</th>
+              <th>Vendor</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th style={{ textAlign: 'right' }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOrders.map((order) => {
+              const sc = statusColors[order.status] || statusColors.pending
+              return (
+                <tr key={order.id}>
+                  <td><input type="checkbox" style={{ accentColor: '#1A5C58' }} /></td>
+                  <td style={{ fontWeight: 700, color: '#2C3E50' }}>{order.id}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="avatar-chip" style={{ width: 28, height: 28, fontSize: 11 }}>
+                        {order.avatar}
                       </div>
-                      <span className="text-sm text-[#2C3E50]">{order.client}</span>
+                      <span style={{ color: '#2C3E50' }}>{order.client}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-[#64748B]">{order.vendor}</td>
-                  <td className="py-3 px-4">
-                    <span className={cn('px-2 py-1 text-xs font-medium rounded-full capitalize', statusColors[order.status])}>
+                  <td style={{ color: '#64748B' }}>{order.vendor}</td>
+                  <td>
+                    <span className="status-pill" style={{ background: sc.bg, color: sc.fg }}>
                       {order.status.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm text-[#2C3E50] text-right">{formatCurrency(order.total)}</td>
-                  <td className="py-3 px-4 text-right">
-                    <button className="text-sm text-[#1A5C58] hover:text-[#0F423F] font-medium">
-                      View
-                    </button>
+                  <td style={{ color: '#64748B' }}>{order.date}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700, color: '#2C3E50' }}>
+                    {formatCurrency(order.total)}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E2E8F0]">
-          <p className="text-sm text-[#64748B]">
-            Showing 1-10 of {filteredOrders.length} orders
-          </p>
-          <div className="flex items-center gap-1">
-            <button className="p-2 text-[#64748B] hover:text-[#2C3E50] hover:bg-[#F1F5F9] rounded-lg transition-colors">
-              <ChevronLeft size={16} />
-            </button>
-            <button className="px-3 py-1.5 bg-[#1A5C58] text-white text-sm font-medium rounded-lg">1</button>
-            <button className="px-3 py-1.5 text-[#64748B] hover:bg-[#F1F5F9] text-sm font-medium rounded-lg transition-colors">2</button>
-            <button className="px-3 py-1.5 text-[#64748B] hover:bg-[#F1F5F9] text-sm font-medium rounded-lg transition-colors">3</button>
-            <button className="p-2 text-[#64748B] hover:text-[#2C3E50] hover:bg-[#F1F5F9] rounded-lg transition-colors">
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+              )
+            })}
+          </tbody>
+        </table>
+        <div className="dt-footer">View all orders</div>
       </div>
     </div>
   )

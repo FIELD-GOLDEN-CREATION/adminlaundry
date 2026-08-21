@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus, Search, Trash2, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { Plus, Trash2 } from 'lucide-react'
 import { adminApi } from '@/services/api'
 import type { User, UserRole } from '@/types'
 
@@ -22,11 +20,7 @@ const mockUsers: User[] = [
 ]
 
 const roleColors: Record<string, string> = {
-  vendor: 'bg-[#1A5C58]/10 text-[#1A5C58]',
-  driver: 'bg-[#D4841A]/10 text-[#D4841A]',
-  customer: 'bg-blue-100 text-blue-700',
-  staff: 'bg-purple-100 text-purple-700',
-  admin: 'bg-red-100 text-red-700',
+  vendor: '#E8F2F1', driver: '#FDF3E3', customer: '#E3EEFF',
 }
 
 export default function MembersPage() {
@@ -37,30 +31,20 @@ export default function MembersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', phone: '' })
 
-  useEffect(() => {
-    if (role) setActiveTab(role)
-  }, [role])
+  useEffect(() => { if (role) setActiveTab(role) }, [role])
 
   const currentRole = roleTabs.find((t) => t.id === activeTab)?.role || 'vendor'
   const filteredUsers = users.filter(
-    (u) =>
-      u.role === currentRole &&
-      (u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    (u) => u.role === currentRole && (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   const handleCreateUser = async () => {
     try {
-      const response = await adminApi.createUser({
-        ...newUser,
-        role: currentRole,
-      })
+      const response = await adminApi.createUser({ ...newUser, role: currentRole })
       setUsers((prev) => [...prev, response.data.data || response.data.user])
       setShowCreateModal(false)
       setNewUser({ name: '', email: '', password: '', phone: '' })
-    } catch (err) {
-      console.error('Failed to create user:', err)
-    }
+    } catch (err) { console.error('Failed to create user:', err) }
   }
 
   const handleDeleteUser = async (id: number) => {
@@ -68,182 +52,189 @@ export default function MembersPage() {
     try {
       await adminApi.deleteUser(id)
       setUsers((prev) => prev.filter((u) => u.id !== id))
-    } catch (err) {
-      console.error('Failed to delete user:', err)
-    }
+    } catch (err) { console.error('Failed to delete user:', err) }
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Directory"
-        title="Members"
-        description="Manage your team and customers"
-        action={
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1A5C58] text-white text-sm font-medium rounded-xl hover:bg-[#0F423F] transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-            Add {roleTabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
-          </button>
-        }
-      />
+    <div>
+      {/* Title card */}
+      <div className="title-card">
+        <ol className="breadcrumb" style={{ margin: 0, padding: 0 }}>
+          <li><a href="/" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Home</a></li>
+          <li className="sep">/</li>
+          <li className="current">Members</li>
+        </ol>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+            fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+            border: 'none', borderRadius: 9, cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} /> Add {roleTabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
+        </button>
+      </div>
 
-      <div className="flex gap-2 border-b border-[#E2E8F0]">
+      {/* Tabs */}
+      <div style={{
+        display: 'flex', gap: 0, borderBottom: '1px solid #EDE7D9',
+        background: '#FFFFFF', borderRadius: '14px 14px 0 0', padding: '0 16px',
+        boxShadow: '0 1px 2px rgba(15,23,34,0.05), 0 1px 1px rgba(15,23,34,0.03)',
+      }}>
         {roleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
-              activeTab === tab.id
-                ? 'border-[#1A5C58] text-[#1A5C58]'
-                : 'border-transparent text-[#64748B] hover:text-[#2C3E50]'
-            )}
+            style={{
+              padding: '14px 16px', fontSize: 13, fontWeight: 600,
+              color: activeTab === tab.id ? '#1A5C58' : '#64748B',
+              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+            }}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="relative max-w-md">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" />
+      {/* Search */}
+      <div className="search-box" style={{ maxWidth: 320, margin: '16px 0' }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
         <input
-          type="text"
           placeholder={`Search ${activeTab}...`}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20 focus:border-[#1A5C58]"
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Name</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Email</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Role</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Joined</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-[#64748B] uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="border-b border-[#E2E8F0]/50 last:border-0 hover:bg-[#F8FAFC] transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#1A5C58]/10 flex items-center justify-center">
-                        <span className="text-sm font-medium text-[#1A5C58]">{user.name.charAt(0)}</span>
-                      </div>
-                      <span className="text-sm font-medium text-[#2C3E50]">{user.name}</span>
+      {/* Table */}
+      <div className="data-table-card">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user) => (
+              <tr key={user.id}>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 12 }}>
+                      {user.name.charAt(0)}
                     </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[#64748B]">{user.email}</td>
-                  <td className="py-3 px-4">
-                    <span className={cn('px-2 py-1 text-xs font-medium rounded-full capitalize', roleColors[user.role])}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-[#64748B]">
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="p-1.5 text-[#64748B] hover:text-[#C0553F] hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-[#64748B]">
-                    No {activeTab} found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    <span style={{ fontWeight: 600, color: '#2C3E50', fontSize: 13 }}>{user.name}</span>
+                  </div>
+                </td>
+                <td style={{ color: '#64748B', fontSize: 13 }}>{user.email}</td>
+                <td>
+                  <span
+                    className="status-pill"
+                    style={{ background: roleColors[user.role] || '#F1F5F9', color: '#2C3E50' }}
+                  >
+                    {user.role}
+                  </span>
+                </td>
+                <td style={{ color: '#64748B', fontSize: 13 }}>
+                  {new Date(user.created_at).toLocaleDateString()}
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    style={{
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: '#64748B', padding: 6, borderRadius: 6,
+                    }}
+                    title="Delete"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
+                  No {activeTab} found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        <div className="dt-footer">
+          {filteredUsers.length === 0 ? 'No records' : `Showing ${filteredUsers.length} ${activeTab}`}
         </div>
       </div>
 
+      {/* Create modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl w-full max-w-md mx-4 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[#2C3E50]">
-                Add {roleTabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
-              </h2>
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }}
+            onClick={() => setShowCreateModal(false)}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
+            zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>
+              Add {roleTabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'Name', key: 'name', type: 'text' },
+                { label: 'Email', key: 'email', type: 'email' },
+                { label: 'Password', key: 'password', type: 'password' },
+                { label: 'Phone (optional)', key: 'phone', type: 'tel' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.type}
+                    value={(newUser as any)[field.key]}
+                    onChange={(e) => setNewUser((p) => ({ ...p, [field.key]: e.target.value }))}
+                    placeholder={`Enter ${field.label.toLowerCase()}`}
+                    style={{
+                      width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
+                      padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="p-1 text-[#64748B] hover:text-[#2C3E50] rounded-lg"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#2C3E50] mb-1.5">Name</label>
-                <input
-                  type="text"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-                  placeholder="Enter name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2C3E50] mb-1.5">Email</label>
-                <input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser((prev) => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-                  placeholder="Enter email"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2C3E50] mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser((prev) => ({ ...prev, password: e.target.value }))}
-                  className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-                  placeholder="Enter password"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#2C3E50] mb-1.5">Phone (optional)</label>
-                <input
-                  type="tel"
-                  value={newUser.phone}
-                  onChange={(e) => setNewUser((prev) => ({ ...prev, phone: e.target.value }))}
-                  className="w-full px-3 py-2 bg-[#F5F0E8]/50 border border-[#E2E8F0] rounded-lg text-sm text-[#2C3E50] focus:outline-none focus:ring-2 focus:ring-[#1A5C58]/20"
-                  placeholder="Enter phone number"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-sm text-[#64748B] hover:text-[#2C3E50] transition-colors"
+                style={{
+                  padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B',
+                  background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateUser}
-                className="px-4 py-2 bg-[#1A5C58] text-white text-sm font-medium rounded-lg hover:bg-[#0F423F] transition-colors"
+                style={{
+                  padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF',
+                  background: '#1A5C58', border: 'none', borderRadius: 9, cursor: 'pointer',
+                }}
               >
                 Create
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

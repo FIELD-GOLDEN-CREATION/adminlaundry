@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { PageHeader } from '@/components/layout/PageHeader'
 
 const agents = [
   { id: 'all', label: 'All Agents' },
@@ -40,53 +39,60 @@ export default function ReportsPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Analytics"
-        title="Reports"
-        description="Performance metrics and analytics"
-        action={
-          <button
-            onClick={() => navigate('/reports/center')}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1A5C58] text-white text-sm font-medium rounded-xl hover:bg-[#0F423F] transition-colors shadow-sm"
-          >
-            Browse All Reports
-            <ArrowRight size={16} />
-          </button>
-        }
-      />
+    <div>
+      {/* Title card */}
+      <div className="title-card">
+        <ol className="breadcrumb" style={{ margin: 0, padding: 0 }}>
+          <li><a href="/" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Home</a></li>
+          <li className="sep">/</li>
+          <li className="current">Reports</li>
+        </ol>
+        <button
+          onClick={() => navigate('/reports/center')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+            fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+            border: 'none', borderRadius: 9, cursor: 'pointer',
+          }}
+        >
+          Browse All Reports
+        </button>
+      </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-[#64748B]">Agent:</span>
-          <div className="flex gap-1">
+      {/* Filter pills */}
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>Agent:</span>
+          <div style={{ display: 'flex', gap: 4 }}>
             {agents.map((agent) => (
               <button
                 key={agent.id}
                 onClick={() => setSelectedAgent(agent.id)}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  selectedAgent === agent.id
-                    ? 'bg-[#1A5C58] text-white'
-                    : 'bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F5F9]'
-                }`}
+                style={{
+                  padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                  color: selectedAgent === agent.id ? '#FFFFFF' : '#64748B',
+                  background: selectedAgent === agent.id ? '#1A5C58' : '#FFFFFF',
+                  border: '1px solid #EDE7D9', borderRadius: 8, cursor: 'pointer',
+                }}
               >
                 {agent.label}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-[#64748B]">Period:</span>
-          <div className="flex gap-1">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>Period:</span>
+          <div style={{ display: 'flex', gap: 4 }}>
             {periods.map((period) => (
               <button
                 key={period.id}
                 onClick={() => setSelectedPeriod(period.id)}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  selectedPeriod === period.id
-                    ? 'bg-[#1A5C58] text-white'
-                    : 'bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F5F9]'
-                }`}
+                style={{
+                  padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                  color: selectedPeriod === period.id ? '#FFFFFF' : '#64748B',
+                  background: selectedPeriod === period.id ? '#1A5C58' : '#FFFFFF',
+                  border: '1px solid #EDE7D9', borderRadius: 8, cursor: 'pointer',
+                }}
               >
                 {period.label}
               </button>
@@ -95,28 +101,26 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Metric tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
         {metrics.map((metric) => (
-          <div key={metric.label} className="bg-white rounded-xl border border-[#E2E8F0] p-5">
-            <p className="text-sm text-[#64748B]">{metric.label}</p>
-            <div className="flex items-end gap-2 mt-1">
-              <p className="text-3xl font-bold text-[#2C3E50]">{metric.value}</p>
+          <div key={metric.label} className="panel" style={{ padding: 20 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: '#64748B' }}>{metric.label}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
+              <span style={{ fontSize: 28, fontWeight: 700, color: '#2C3E50' }}>{metric.value}</span>
               {metric.trend === 'up' && (
-                <span className="flex items-center gap-1 text-sm text-green-600 mb-1">
-                  <TrendingUp size={14} />
-                  +{metric.change}%
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#1A7A5C' }}>
+                  <TrendingUp size={12} /> +{metric.change}%
                 </span>
               )}
               {metric.trend === 'down' && (
-                <span className="flex items-center gap-1 text-sm text-red-600 mb-1">
-                  <TrendingDown size={14} />
-                  +{metric.change}%
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#C0553F' }}>
+                  <TrendingDown size={12} /> +{metric.change}%
                 </span>
               )}
               {metric.trend === 'neutral' && (
-                <span className="flex items-center gap-1 text-sm text-[#64748B] mb-1">
-                  <Minus size={14} />
-                  --
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#64748B' }}>
+                  <Minus size={12} /> --
                 </span>
               )}
             </div>
@@ -124,32 +128,42 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-[#E2E8F0] p-6">
-        <h2 className="text-lg font-semibold text-[#2C3E50] mb-4">Orders vs Cancellations</h2>
-        <div className="h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#64748B' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
-              <Legend />
-              <Bar dataKey="orders" name="Orders" fill="#1A5C58" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cancelled" name="Cancelled" fill="#C0553F" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Chart */}
+      <div className="chart-card">
+        <div className="chart-card-head">
+          <div className="chart-card-title">Orders vs Cancellations</div>
+        </div>
+        <div className="chart-card-body">
+          <div style={{ height: 350 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EDE7D9" />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#64748B' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #EDE7D9',
+                    borderRadius: '10px',
+                    fontSize: '12px',
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="orders" name="Orders" fill="#1A5C58" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cancelled" name="Cancelled" fill="#C0553F" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#1A5C58] hover:bg-[#1A5C58]/10 rounded-lg transition-colors">
+      {/* Export */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+          fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+          border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+        }}>
           Export PDF
         </button>
       </div>
