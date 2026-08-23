@@ -4,12 +4,29 @@ import { AppShell } from '@/components/layout/AppShell'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import OrdersPage from '@/pages/OrdersPage'
+import OrderDetailPage from '@/pages/OrderDetailPage'
 import SettingsPage from '@/pages/SettingsPage'
 import ReportsPage from '@/pages/ReportsPage'
 import ReportsCenterPage from '@/pages/ReportsCenterPage'
 import VendorLoadReportPage from '@/pages/VendorLoadReportPage'
+import OrdersReportPage from '@/pages/OrdersReportPage'
+import RevenueReportPage from '@/pages/RevenueReportPage'
+import SubscriptionsReportPage from '@/pages/SubscriptionsReportPage'
+import VendorPerformanceReportPage from '@/pages/VendorPerformanceReportPage'
+import CustomerReportPage from '@/pages/CustomerReportPage'
 import MembersPage from '@/pages/MembersPage'
+import VendorDetailPage from '@/pages/VendorDetailPage'
+import CustomerDetailPage from '@/pages/CustomerDetailPage'
+import StaffDetailPage from '@/pages/StaffDetailPage'
+import PromosPage from '@/pages/PromosPage'
+import PackagesPage from '@/pages/PackagesPage'
+import CategoriesItemsPage from '@/pages/CategoriesItemsPage'
+import RequestsPage from '@/pages/RequestsPage'
+import NotificationsPage from '@/pages/NotificationsPage'
+import SubscriptionsPage from '@/pages/SubscriptionsPage'
+import StaffSettingsPage from '@/pages/StaffSettingsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import { VendorApplicationProvider } from '@/contexts/VendorApplicationContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -34,15 +51,43 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>
 }
 
+const staffRestrictedPaths = ['/reports', '/subscriptions', '/settings']
+const staffRestrictedMemberPaths = ['/members/staff']
+
+function StaffRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const location = window.location.pathname
+
+  if (user?.role === 'staff') {
+    if (staffRestrictedPaths.some((p) => location === p || location.startsWith(p + '/'))) {
+      return <Navigate to="/" replace />
+    }
+    if (location === '/members' || staffRestrictedMemberPaths.some((p) => location.startsWith(p))) {
+      return <Navigate to="/" replace />
+    }
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
-    <Routes>
+    <VendorApplicationProvider>
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/"
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetailPage />
           </ProtectedRoute>
         }
       />
@@ -55,10 +100,34 @@ export default function App() {
         }
       />
       <Route
+        path="/members/vendors/:id"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><VendorDetailPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/clients/:id"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><CustomerDetailPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/staff/:id"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><StaffDetailPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/members/:role?"
         element={
           <ProtectedRoute>
-            <MembersPage />
+            <StaffRoute><MembersPage /></StaffRoute>
           </ProtectedRoute>
         }
       />
@@ -66,7 +135,7 @@ export default function App() {
         path="/reports"
         element={
           <ProtectedRoute>
-            <ReportsPage />
+            <StaffRoute><ReportsPage /></StaffRoute>
           </ProtectedRoute>
         }
       />
@@ -74,7 +143,7 @@ export default function App() {
         path="/reports/center"
         element={
           <ProtectedRoute>
-            <ReportsCenterPage />
+            <StaffRoute><ReportsCenterPage /></StaffRoute>
           </ProtectedRoute>
         }
       />
@@ -82,7 +151,47 @@ export default function App() {
         path="/reports/vendor-load"
         element={
           <ProtectedRoute>
-            <VendorLoadReportPage />
+            <StaffRoute><VendorLoadReportPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/orders"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><OrdersReportPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/revenue"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><RevenueReportPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/subscriptions"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><SubscriptionsReportPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/vendor-performance"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><VendorPerformanceReportPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/customers"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><CustomerReportPage /></StaffRoute>
           </ProtectedRoute>
         }
       />
@@ -90,11 +199,68 @@ export default function App() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <SettingsPage />
+            <StaffRoute><SettingsPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/promos"
+        element={
+          <ProtectedRoute>
+            <PromosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/packages"
+        element={
+          <ProtectedRoute>
+            <PackagesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/categories"
+        element={
+          <ProtectedRoute>
+            <CategoriesItemsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/requests"
+        element={
+          <ProtectedRoute>
+            <RequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff-settings"
+        element={
+          <ProtectedRoute>
+            <StaffSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/subscriptions"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><SubscriptionsPage /></StaffRoute>
           </ProtectedRoute>
         }
       />
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </VendorApplicationProvider>
   )
 }

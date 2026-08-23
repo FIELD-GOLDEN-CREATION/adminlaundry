@@ -6,10 +6,15 @@ import { Topbar } from './Topbar'
 const titleMap: Record<string, string> = {
   '/': 'Dashboard',
   '/orders': 'Orders',
+  '/promos': 'Promos',
+  '/packages': 'Packages',
+  '/categories': 'Categories & Items',
+  '/requests': 'Requests',
   '/reports': 'Reports',
   '/settings': 'Settings',
   '/members/vendors': 'Vendors',
-  '/members/drivers': 'Drivers',
+  '/members/vendors/:id': 'Vendor Detail',
+  '/members/drivers': 'Staff',
   '/members/clients': 'Clients',
   '/reports/center': 'Reports Center',
   '/reports/vendor-load': 'Vendor Load Report',
@@ -22,7 +27,14 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const title = titleMap[location.pathname] || 'Dashboard'
+  const pathname = location.pathname
+  const title = titleMap[pathname]
+    || (pathname.startsWith('/orders/') ? 'Order Detail' : null)
+    || (pathname.startsWith('/members/vendors/') ? 'Vendor Detail' : null)
+    || (pathname.startsWith('/members/clients/') ? 'Client Detail' : null)
+    || (pathname.startsWith('/members/staff/') ? 'Staff Detail' : null)
+    || (pathname.startsWith('/members/staff') ? 'Staff' : null)
+    || 'Dashboard'
 
   return (
     <div className="app">

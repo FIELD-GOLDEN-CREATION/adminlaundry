@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Menu, Bell, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 interface TopbarProps {
   onMenuClick: () => void
@@ -20,6 +20,8 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
   const navigate = useNavigate()
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  const isStaff = user?.role === 'staff'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -88,7 +90,7 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
                 ))}
               </div>
               <div className="notif-footer">
-                <a href="#">View all notifications</a>
+                <Link to="/notifications" onClick={() => setNotifOpen(false)}>View all notifications</Link>
               </div>
             </div>
           )}
@@ -98,7 +100,7 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
         <div
           className="avatar-chip"
           title={user?.name || 'Admin'}
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate(isStaff ? '/staff-settings' : '/settings')}
           style={{ cursor: 'pointer' }}
         >
           {user?.name?.charAt(0) || 'A'}

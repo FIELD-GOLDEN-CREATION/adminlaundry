@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Download, Printer } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -37,6 +38,7 @@ const stats = [
 export default function OrdersPage() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedVendor, setSelectedVendor] = useState('all')
+  const navigate = useNavigate()
 
   const filteredOrders = orders.filter((order) => {
     if (selectedStatus !== 'all' && order.status !== selectedStatus) return false
@@ -159,8 +161,14 @@ export default function OrdersPage() {
             {filteredOrders.map((order) => {
               const sc = statusColors[order.status] || statusColors.pending
               return (
-                <tr key={order.id}>
-                  <td><input type="checkbox" style={{ accentColor: '#1A5C58' }} /></td>
+                <tr
+                  key={order.id}
+                  onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" style={{ accentColor: '#1A5C58', cursor: 'pointer' }} />
+                  </td>
                   <td style={{ fontWeight: 700, color: '#2C3E50' }}>{order.id}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

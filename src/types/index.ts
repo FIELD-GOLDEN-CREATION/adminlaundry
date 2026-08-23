@@ -9,6 +9,7 @@ export interface User {
   photo_url?: string
   firebase_uid?: string
   created_at: string
+  plan?: string
 }
 
 export interface Order {
@@ -53,6 +54,26 @@ export interface DriverPin {
   status: 'active' | 'idle' | 'busy'
 }
 
+export type PackageKind = 'weight' | 'itemCount' | 'household' | 'subscription'
+
+export interface Package {
+  id: string
+  name: string
+  tagline: string
+  kind: PackageKind
+  priceTzs: number
+  priceUnit: string
+  inclusions: string[]
+  compareAtTzs?: number
+  note: string
+  tag?: string
+  serviceTags: string[]
+  active: boolean
+  vendor: string
+  vendorId: string
+  orderCount: number
+}
+
 export interface ReportCategory {
   name: string
   reports: Report[]
@@ -63,4 +84,131 @@ export interface Report {
   name: string
   description: string
   available: boolean
+}
+
+export interface VendorDetail {
+  id: string
+  name: string
+  email: string
+  phone: string
+  ownerName: string
+  location: string
+  address: string
+  registeredAt: string
+  status: 'active' | 'suspended' | 'pending'
+  services: string[]
+  badges: string[]
+  description: string
+  rating: number
+  reviewCount: number
+  totalOrders: number
+  totalRevenue: number
+  balance: number
+  commission: number
+  platformFee: number
+  isOpen: boolean
+  workingDays: string[]
+  openTime: string
+  closeTime: string
+  turnaround: string
+}
+
+export interface VendorCategory {
+  id: string
+  name: string
+  items: VendorCategoryItem[]
+}
+
+export interface VendorCategoryItem {
+  id: string
+  name: string
+  price: number
+  unit: string
+  available: boolean
+}
+
+export interface VendorPromo {
+  id: string
+  code: string
+  title: string
+  description: string
+  discountValue: number
+  isPercentage: boolean
+  appliesTo: string
+  targetCategory?: string
+  targetItem?: string
+  audience: string
+  minSpend: number
+  maxRedemptions: number
+  currentRedemptions: number
+  isActive: boolean
+  expiresAt: string
+}
+
+export interface VendorOrder {
+  id: string
+  customer: string
+  items: string
+  total: number
+  status: string
+  date: string
+}
+
+export interface PayoutRecord {
+  date: string
+  ref: string
+  amount: number
+}
+
+export interface VendorReview {
+  id: string
+  customer: string
+  rating: number
+  comment: string
+  date: string
+}
+
+export type AuthProvider = 'email' | 'google'
+
+export interface CustomerDetail {
+  id: string
+  name: string
+  email: string
+  phone: string
+  authProvider: AuthProvider
+  photoUrl?: string
+  registeredAt: string
+  lastLoginAt: string
+  status: 'active' | 'suspended'
+  totalOrders: number
+  totalSpent: number
+  favoriteVendorIds: string[]
+  addresses: CustomerAddress[]
+  preferences: CustomerPreference[]
+  paymentMethods: CustomerPaymentMethod[]
+}
+
+export interface CustomerAddress {
+  label: string
+  line: string
+}
+
+export interface CustomerPreference {
+  label: string
+  enabled: boolean
+}
+
+export interface CustomerPaymentMethod {
+  type: string
+  label: string
+  last4?: string
+}
+
+export interface FavoriteVendor {
+  id: string
+  name: string
+  ordersCount: number
+  totalSpent: number
+  lastOrderDate: string
+  rating: number
 }

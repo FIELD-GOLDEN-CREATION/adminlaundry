@@ -13,6 +13,10 @@ import {
   Store,
   UserCheck,
   X,
+  Package,
+  Percent,
+  Bell,
+  CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -23,26 +27,39 @@ interface SidebarProps {
   mode: 'desktop' | 'mobile'
 }
 
-const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/orders', label: 'Orders', icon: ShoppingCart },
+const allNavItems = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'staff'] },
+  { path: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin', 'staff'] },
+  { path: '/promos', label: 'Promos', icon: Percent, roles: ['admin', 'staff'] },
+  { path: '/packages', label: 'Packages', icon: Package, roles: ['admin', 'staff'] },
+  { path: '/categories', label: 'Categories & Items', icon: Package, roles: ['admin', 'staff'] },
+  { path: '/requests', label: 'Requests', icon: FileText, roles: ['admin', 'staff'] },
+  { path: '/members/vendors', label: 'Vendors', icon: Store, roles: ['staff'] },
+  { path: '/members/clients', label: 'Clients', icon: UserCheck, roles: ['staff'] },
   {
     label: 'Members',
     icon: Users,
+    roles: ['admin'],
     children: [
       { path: '/members/vendors', label: 'Vendors', icon: Store },
-      { path: '/members/drivers', label: 'Drivers', icon: Truck },
+      { path: '/members/staff', label: 'Staff', icon: Truck },
       { path: '/members/clients', label: 'Clients', icon: UserCheck },
     ],
   },
-  { path: '/reports', label: 'Reports', icon: FileText },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
+  { path: '/subscriptions', label: 'Subscriptions', icon: CreditCard, roles: ['admin'] },
+  { path: '/notifications', label: 'Notifications', icon: Bell, roles: ['admin', 'staff'] },
+  { path: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+  { path: '/staff-settings', label: 'Settings', icon: Settings, roles: ['staff'] },
 ]
 
 function SidebarContent({ onClose }: { onClose: () => void }) {
   const [expandedItems, setExpandedItems] = useState<string[]>(['Members'])
   const location = useLocation()
   const { user, logout } = useAuth()
+
+  const isStaff = user?.role === 'staff'
+  const navItems = allNavItems.filter((item) => item.roles.includes(isStaff ? 'staff' : 'admin'))
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>
@@ -64,7 +81,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <div className="brand-title">FreshFold</div>
-          <div className="brand-subtitle">ADMIN</div>
+          <div className="brand-subtitle">{isStaff ? 'STAFF' : 'ADMIN'}</div>
         </div>
       </div>
       <button

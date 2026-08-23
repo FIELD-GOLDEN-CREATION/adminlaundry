@@ -1,35 +1,42 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Trash2 } from 'lucide-react'
 import { adminApi } from '@/services/api'
 import type { User, UserRole } from '@/types'
 
 const roleTabs = [
   { id: 'vendors', role: 'vendor' as UserRole, label: 'Vendors' },
-  { id: 'drivers', role: 'driver' as UserRole, label: 'Drivers' },
+  { id: 'staff', role: 'staff' as UserRole, label: 'Staff' },
   { id: 'clients', role: 'customer' as UserRole, label: 'Clients' },
 ]
 
 const mockUsers: User[] = [
-  { id: 1, name: 'Marina Fresh', email: 'marina@freshfold.com', role: 'vendor', created_at: '2024-01-10' },
-  { id: 2, name: 'Bright & Fold', email: 'bright@freshfold.com', role: 'vendor', created_at: '2024-01-08' },
-  { id: 3, name: 'Daniel Kimani', email: 'daniel@freshfold.com', role: 'driver', created_at: '2024-01-12' },
-  { id: 4, name: 'Kofi Asante', email: 'kofi@freshfold.com', role: 'driver', created_at: '2024-01-11' },
+  { id: 1, name: 'Marina Fresh', email: 'marina@freshfold.com', role: 'vendor', created_at: '2024-01-10', plan: 'pro' },
+  { id: 2, name: 'Bright & Fold', email: 'bright@freshfold.com', role: 'vendor', created_at: '2024-01-08', plan: 'enterprise' },
+  { id: 3, name: 'Daniel Kimani', email: 'daniel@freshfold.com', role: 'staff', created_at: '2024-01-12', phone: '+255 744 418 820' },
+  { id: 4, name: 'Kofi Asante', email: 'kofi@freshfold.com', role: 'staff', created_at: '2024-01-11', phone: '+255 731 234 567' },
   { id: 5, name: 'Amara Koroma', email: 'amara@email.com', role: 'customer', created_at: '2024-01-15' },
   { id: 6, name: 'Jabari Mensah', email: 'jabari@email.com', role: 'customer', created_at: '2024-01-14' },
 ]
 
 const roleColors: Record<string, string> = {
-  vendor: '#E8F2F1', driver: '#FDF3E3', customer: '#E3EEFF',
+  vendor: '#E8F2F1', staff: '#FDF3E3', customer: '#E3EEFF',
+}
+
+const planColors: Record<string, { bg: string; fg: string }> = {
+  basic: { bg: '#F1F5F9', fg: '#64748B' },
+  pro: { bg: '#E8F2F1', fg: '#1A5C58' },
+  enterprise: { bg: '#FDF3E3', fg: '#D4841A' },
 }
 
 export default function MembersPage() {
   const { role } = useParams()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(role || 'vendors')
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState<User[]>(mockUsers)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', phone: '' })
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', phone: '', plan: 'basic' })
 
   useEffect(() => { if (role) setActiveTab(role) }, [role])
 
@@ -43,7 +50,7 @@ export default function MembersPage() {
       const response = await adminApi.createUser({ ...newUser, role: currentRole })
       setUsers((prev) => [...prev, response.data.data || response.data.user])
       setShowCreateModal(false)
-      setNewUser({ name: '', email: '', password: '', phone: '' })
+      setNewUser({ name: '', email: '', password: '', phone: '', plan: 'basic' })
     } catch (err) { console.error('Failed to create user:', err) }
   }
 
@@ -53,6 +60,12 @@ export default function MembersPage() {
       await adminApi.deleteUser(id)
       setUsers((prev) => prev.filter((u) => u.id !== id))
     } catch (err) { console.error('Failed to delete user:', err) }
+  }
+
+  const handleRowClick = (user: User) => {
+    if (user.role === 'vendor') navigate(`/members/vendors/${user.id}`)
+    else if (user.role === 'customer') navigate(`/members/clients/${user.id}`)
+    else if (user.role === 'staff') navigate(`/members/staff/${user.id}`)
   }
 
   return (
@@ -118,13 +131,18 @@ export default function MembersPage() {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
+              {currentRole === 'vendor' && <th>Plan</th>}
               <th>Joined</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr
+                key={user.id}
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleRowClick(user)}
+              >
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 12 }}>
@@ -142,10 +160,23 @@ export default function MembersPage() {
                     {user.role}
                   </span>
                 </td>
+                {currentRole === 'vendor' && (
+                  <td>
+                    <span
+                      className="status-pill"
+                      style={{
+                        background: planColors[user.plan || 'basic']?.bg || '#F1F5F9',
+                        color: planColors[user.plan || 'basic']?.fg || '#64748B',
+                      }}
+                    >
+                      {user.plan || 'basic'}
+                    </span>
+                  </td>
+                )}
                 <td style={{ color: '#64748B', fontSize: 13 }}>
                   {new Date(user.created_at).toLocaleDateString()}
                 </td>
-                <td style={{ textAlign: 'right' }}>
+                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleDeleteUser(user.id)}
                     style={{
@@ -161,7 +192,7 @@ export default function MembersPage() {
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
+                <td colSpan={currentRole === 'vendor' ? 6 : 5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
                   No {activeTab} found
                 </td>
               </tr>
@@ -212,6 +243,26 @@ export default function MembersPage() {
                   />
                 </div>
               ))}
+              {currentRole === 'vendor' && (
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>
+                    Subscription Plan
+                  </label>
+                  <select
+                    value={newUser.plan}
+                    onChange={(e) => setNewUser((p) => ({ ...p, plan: e.target.value }))}
+                    style={{
+                      width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
+                      padding: '4px 10px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="basic">Basic (Free — 30 orders/mo)</option>
+                    <option value="pro">Pro (TZS 75,000/mo — Unlimited orders)</option>
+                    <option value="enterprise">Enterprise (TZS 200,000/mo — Multi-location)</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
               <button

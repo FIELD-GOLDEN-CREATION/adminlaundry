@@ -392,6 +392,13 @@ tbody tr:hover { background: #E8F2F1; }
   color: #64748B;
   font-style: italic;
 }
+.data-table-card tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.data-table-card tbody tr:hover {
+  background: #F5F0E8;
+}
 
 /* Admin card in sidebar footer (matches original) */
 .admin-card {

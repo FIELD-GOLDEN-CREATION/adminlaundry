@@ -6,36 +6,29 @@ const reportCategories = [
     name: 'Operations',
     reports: [
       { id: 'vendor-load', name: 'Vendor Load', description: 'Current vendor capacity and queue status', available: true },
+      { id: 'vendor-performance', name: 'Vendor Performance', description: 'Vendor ratings, fulfillment times, and earnings', available: true },
       { id: 'driver-assignment', name: 'Driver Assignment', description: 'Driver availability and assignment rates', available: false },
-      { id: 'peak-hours', name: 'Peak Hours', description: 'Order volume by hour of day', available: false },
     ],
   },
   {
     name: 'Orders',
     reports: [
-      { id: 'order-summary', name: 'Order Summary', description: 'Overview of all orders by status', available: false },
-      { id: 'order-trends', name: 'Order Trends', description: 'Order volume trends over time', available: false },
-      { id: 'cancellation-rate', name: 'Cancellation Rate', description: 'Cancelled orders analysis', available: false },
-      { id: 'avg-processing', name: 'Average Processing Time', description: 'Mean time from order to delivery', available: false },
-      { id: 'order-value', name: 'Order Value Distribution', description: 'Breakdown of order values', available: false },
+      { id: 'orders', name: 'Orders Report', description: 'Comprehensive order analytics and trends', available: true },
+      { id: 'peak-hours', name: 'Peak Hours', description: 'Order volume by hour of day', available: false },
+    ],
+  },
+  {
+    name: 'Customers',
+    reports: [
+      { id: 'customers', name: 'Customer Analytics', description: 'Customer growth, retention, and segments', available: true },
       { id: 'repeat-customers', name: 'Repeat Customers', description: 'Customer retention metrics', available: false },
     ],
   },
   {
-    name: 'Payments & Refunds',
+    name: 'Payments & Subscriptions',
     reports: [
-      { id: 'revenue', name: 'Revenue Report', description: 'Total revenue and breakdown', available: false },
-      { id: 'refund-analysis', name: 'Refund Analysis', description: 'Refund reasons and trends', available: false },
-      { id: 'payment-methods', name: 'Payment Methods', description: 'Payment method distribution', available: false },
-    ],
-  },
-  {
-    name: 'Vendor Payouts',
-    reports: [
-      { id: 'vendor-payout-summary', name: 'Payout Summary', description: 'Total payouts to vendors', available: false },
-      { id: 'vendor-earnings', name: 'Vendor Earnings', description: 'Earnings by vendor', available: false },
-      { id: 'payout-history', name: 'Payout History', description: 'Historical payout records', available: false },
-      { id: 'pending-payouts', name: 'Pending Payouts', description: 'Awaiting payout processing', available: false },
+      { id: 'revenue', name: 'Revenue & Payments', description: 'Revenue trends, expenses, and payment methods', available: true },
+      { id: 'subscriptions', name: 'Subscriptions Report', description: 'Plan distribution, MRR, and churn analysis', available: true },
     ],
   },
 ]
