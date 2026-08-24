@@ -4,7 +4,7 @@ import { CreditCard, Save, RotateCcw } from 'lucide-react'
 interface PlanLimit {
   key: string
   label: string
-  value: string | number
+  value: string | number | boolean
   type: 'number' | 'toggle' | 'text'
 }
 

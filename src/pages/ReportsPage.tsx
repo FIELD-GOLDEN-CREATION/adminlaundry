@@ -2,13 +2,13 @@ import { useNavigate } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Minus, ArrowRight, BarChart3, ShoppingCart, CreditCard, Repeat, Users, Truck } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
-const overviewMetrics = [
-  { label: 'Total Revenue', value: 'TZS 12.4M', change: 12.5, trend: 'up' as const, color: '#1A5C58' },
-  { label: 'Total Orders', value: '1,284', change: 8.3, trend: 'up' as const, color: '#1F5ECC' },
-  { label: 'Active Vendors', value: '32', change: 2, trend: 'up' as const, color: '#D4841A' },
-  { label: 'Active Subscriptions', value: '42', change: 5.1, trend: 'up' as const, color: '#8B5CF6' },
-  { label: 'Success Rate', value: '94.6%', change: 0, trend: 'neutral' as const, color: '#64748B' },
-  { label: 'Avg Order Value', value: 'TZS 42.5K', change: 3.2, trend: 'up' as const, color: '#1A7A5C' },
+const overviewMetrics: { label: string; value: string; change: number; trend: 'up' | 'down' | 'neutral'; color: string }[] = [
+  { label: 'Total Revenue', value: 'TZS 12.4M', change: 12.5, trend: 'up', color: '#1A5C58' },
+  { label: 'Total Orders', value: '1,284', change: 8.3, trend: 'up', color: '#1F5ECC' },
+  { label: 'Active Vendors', value: '32', change: 2, trend: 'up', color: '#D4841A' },
+  { label: 'Active Subscriptions', value: '42', change: 5.1, trend: 'up', color: '#8B5CF6' },
+  { label: 'Success Rate', value: '94.6%', change: 0, trend: 'neutral', color: '#64748B' },
+  { label: 'Avg Order Value', value: 'TZS 42.5K', change: 3.2, trend: 'up', color: '#1A7A5C' },
 ]
 
 const weeklyData = [

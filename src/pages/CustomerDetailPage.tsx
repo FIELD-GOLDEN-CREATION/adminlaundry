@@ -543,6 +543,7 @@ export default function CustomerDetailPage() {
                     officeLocation: vendorApp.officeLocation,
                     contactPhone: vendorApp.contactPhone,
                     contactWhatsApp: vendorApp.contactWhatsApp,
+                    plan: 'basic',
                   })
                   setShowVendorApp(false)
                   setVendorApp({ officeName: '', officeLocation: '', contactPhone: '', contactWhatsApp: '' })
