@@ -10,15 +10,6 @@ const roleTabs = [
   { id: 'clients', role: 'customer' as UserRole, label: 'Clients' },
 ]
 
-const mockUsers: User[] = [
-  { id: 1, name: 'Marina Fresh', email: 'marina@freshfold.com', role: 'vendor', created_at: '2024-01-10', plan: 'pro' },
-  { id: 2, name: 'Bright & Fold', email: 'bright@freshfold.com', role: 'vendor', created_at: '2024-01-08', plan: 'enterprise' },
-  { id: 3, name: 'Daniel Kimani', email: 'daniel@freshfold.com', role: 'staff', created_at: '2024-01-12', phone: '+255 744 418 820' },
-  { id: 4, name: 'Kofi Asante', email: 'kofi@freshfold.com', role: 'staff', created_at: '2024-01-11', phone: '+255 731 234 567' },
-  { id: 5, name: 'Amara Koroma', email: 'amara@email.com', role: 'customer', created_at: '2024-01-15' },
-  { id: 6, name: 'Jabari Mensah', email: 'jabari@email.com', role: 'customer', created_at: '2024-01-14' },
-]
-
 const roleColors: Record<string, string> = {
   vendor: '#E8F2F1', staff: '#FDF3E3', customer: '#E3EEFF',
 }
@@ -34,11 +25,31 @@ export default function MembersPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(role || 'vendors')
   const [searchQuery, setSearchQuery] = useState('')
-  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', phone: '', plan: 'basic' })
+  const [error, setError] = useState('')
 
   useEffect(() => { if (role) setActiveTab(role) }, [role])
+
+  // Load real users from API on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true)
+      try {
+        const response = await adminApi.getUsers()
+        const data = response.data
+        setUsers(data.users || data.data || [])
+      } catch (err) {
+        console.error('Failed to load users:', err)
+        setError('Failed to load users from server')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [])
 
   const currentRole = roleTabs.find((t) => t.id === activeTab)?.role || 'vendor'
   const filteredUsers = users.filter(
@@ -46,12 +57,18 @@ export default function MembersPage() {
   )
 
   const handleCreateUser = async () => {
+    setError('')
     try {
       const response = await adminApi.createUser({ ...newUser, role: currentRole })
-      setUsers((prev) => [...prev, response.data.data || response.data.user])
+      const created = response.data.user || response.data.data
+      setUsers((prev) => [created, ...prev])
       setShowCreateModal(false)
       setNewUser({ name: '', email: '', password: '', phone: '', plan: 'basic' })
-    } catch (err) { console.error('Failed to create user:', err) }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to create user. Check server logs.'
+      setError(msg)
+      console.error('Failed to create user:', err)
+    }
   }
 
   const handleDeleteUser = async (id: number) => {
@@ -82,7 +99,7 @@ export default function MembersPage() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
             fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
-            border: 'none', borderRadius: 9, cursor: 'pointer',
+            borderRadius: 9, cursor: 'pointer', border: 'none',
           }}
         >
           <Plus size={14} /> Add {roleTabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
@@ -102,8 +119,7 @@ export default function MembersPage() {
             style={{
               padding: '14px 16px', fontSize: 13, fontWeight: 600,
               color: activeTab === tab.id ? '#1A5C58' : '#64748B',
-              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',
-              background: 'transparent', border: 'none', cursor: 'pointer',
+              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
             }}
           >
             {tab.label}
@@ -123,84 +139,94 @@ export default function MembersPage() {
         />
       </div>
 
+      {error && (
+        <div style={{ padding: '10px 14px', marginBottom: 12, background: '#FEE2E2', color: '#991B1B', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+          {error}
+        </div>
+      )}
+
       {/* Table */}
       <div className="data-table-card">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              {currentRole === 'vendor' && <th>Plan</th>}
-              <th>Joined</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((user) => (
-              <tr
-                key={user.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleRowClick(user)}
-              >
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 12 }}>
-                      {user.name.charAt(0)}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#64748B' }}>Loading users...</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                {currentRole === 'vendor' && <th>Plan</th>}
+                <th>Joined</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr
+                  key={user.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleRowClick(user)}
+                >
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 12 }}>
+                        {user.name.charAt(0)}
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#2C3E50', fontSize: 13 }}>{user.name}</span>
                     </div>
-                    <span style={{ fontWeight: 600, color: '#2C3E50', fontSize: 13 }}>{user.name}</span>
-                  </div>
-                </td>
-                <td style={{ color: '#64748B', fontSize: 13 }}>{user.email}</td>
-                <td>
-                  <span
-                    className="status-pill"
-                    style={{ background: roleColors[user.role] || '#F1F5F9', color: '#2C3E50' }}
-                  >
-                    {user.role}
-                  </span>
-                </td>
-                {currentRole === 'vendor' && (
+                  </td>
+                  <td style={{ color: '#64748B', fontSize: 13 }}>{user.email}</td>
                   <td>
                     <span
                       className="status-pill"
-                      style={{
-                        background: planColors[user.plan || 'basic']?.bg || '#F1F5F9',
-                        color: planColors[user.plan || 'basic']?.fg || '#64748B',
-                      }}
+                      style={{ background: roleColors[user.role] || '#F1F5F9', color: '#2C3E50' }}
                     >
-                      {user.plan || 'basic'}
+                      {user.role}
                     </span>
                   </td>
-                )}
-                <td style={{ color: '#64748B', fontSize: 13 }}>
-                  {new Date(user.created_at).toLocaleDateString()}
-                </td>
-                <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => handleDeleteUser(user.id)}
-                    style={{
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      color: '#64748B', padding: 6, borderRadius: 6,
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filteredUsers.length === 0 && (
-              <tr>
-                <td colSpan={currentRole === 'vendor' ? 6 : 5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
-                  No {activeTab} found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  {currentRole === 'vendor' && (
+                    <td>
+                      <span
+                        className="status-pill"
+                        style={{
+                          background: planColors[user.plan || 'basic']?.bg || '#F1F5F9',
+                          color: planColors[user.plan || 'basic']?.fg || '#64748B',
+                        }}
+                      >
+                        {user.plan || 'basic'}
+                      </span>
+                    </td>
+                  )}
+                  <td style={{ color: '#64748B', fontSize: 13 }}>
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
+                  </td>
+                  <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        color: '#64748B', padding: 6, borderRadius: 6,
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={currentRole === 'vendor' ? 6 : 5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
+                    No {activeTab} found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
         <div className="dt-footer">
-          {filteredUsers.length === 0 ? 'No records' : `Showing ${filteredUsers.length} ${activeTab}`}
+          {loading ? 'Loading...' : filteredUsers.length === 0 ? 'No records' : `Showing ${filteredUsers.length} ${activeTab}`}
         </div>
       </div>
 
@@ -238,7 +264,7 @@ export default function MembersPage() {
                     style={{
                       width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
                       padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
-                      outline: 'none',
+                      outline: 'none', boxSizing: 'border-box',
                     }}
                   />
                 </div>
@@ -254,7 +280,7 @@ export default function MembersPage() {
                     style={{
                       width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
                       padding: '4px 10px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
-                      outline: 'none',
+                      outline: 'none', boxSizing: 'border-box',
                     }}
                   >
                     <option value="basic">Basic (Free — 30 orders/mo)</option>

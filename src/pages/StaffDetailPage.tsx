@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, User, Phone, Mail, MapPin, Calendar,
@@ -73,8 +74,30 @@ const statusColors: Record<string, { bg: string; fg: string }> = {
 export default function StaffDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [saved, setSaved] = useState(false)
 
   const staff = mockStaff[Number(id)]
+
+  const handleSaveEdit = () => {
+    // In a real app, this would call adminApi.updateUser()
+    setShowEditModal(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleResetPin = () => {
+    // In a real app, this would call adminApi.updateUser()
+    setShowPinModal(false)
+    setNewPin('')
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
 
   if (!staff) {
     return (
@@ -164,18 +187,29 @@ export default function StaffDetailPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-              fontSize: 12, fontWeight: 700, color: '#1A5C58', background: '#E8F2F1',
-              border: 'none', borderRadius: 8, cursor: 'pointer',
-            }}>
+            <button
+              onClick={() => {
+                setEditName(staff.name)
+                setEditEmail(staff.email)
+                setEditPhone(staff.phone)
+                setShowEditModal(true)
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                fontSize: 12, fontWeight: 700, color: '#1A5C58', background: '#E8F2F1',
+                border: 'none', borderRadius: 8, cursor: 'pointer',
+              }}
+            >
               <Edit2 size={13} /> Edit
             </button>
-            <button style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-              fontSize: 12, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
-              border: '1px solid #EDE7D9', borderRadius: 8, cursor: 'pointer',
-            }}>
+            <button
+              onClick={() => setShowPinModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                fontSize: 12, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+                border: '1px solid #EDE7D9', borderRadius: 8, cursor: 'pointer',
+              }}
+            >
               <RotateCcw size={13} /> Reset PIN
             </button>
           </div>
@@ -308,6 +342,66 @@ export default function StaffDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => setShowEditModal(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
+            zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Edit Staff</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Name</label>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Email</label>
+                <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Phone</label>
+                <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button onClick={() => setShowEditModal(false)} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveEdit} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58', border: 'none', borderRadius: 9, cursor: 'pointer' }}>Save</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Reset PIN Modal */}
+      {showPinModal && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => setShowPinModal(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
+            zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Reset PIN for {staff.name}</div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>New PIN / Password</label>
+              <input type="password" value={newPin} onChange={(e) => setNewPin(e.target.value)} placeholder="Enter new PIN or password" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button onClick={() => setShowPinModal(false)} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleResetPin} disabled={!newPin} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: newPin ? '#1A5C58' : '#94A3B8', border: 'none', borderRadius: 9, cursor: newPin ? 'pointer' : 'not-allowed' }}>Reset PIN</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {saved && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1A5C58', color: '#FFFFFF', padding: '12px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+          Changes saved
+        </div>
+      )}
     </div>
   )
 }

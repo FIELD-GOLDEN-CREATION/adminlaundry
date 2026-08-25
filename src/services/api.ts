@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://freshfold.qecure.online/api'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -28,6 +28,7 @@ api.interceptors.response.use(
 )
 
 export const adminApi = {
+  // User management
   getUsers: (role?: string) => {
     const params = role ? { role } : {}
     return api.get('/admin/users', { params })
@@ -37,5 +38,73 @@ export const adminApi = {
   },
   deleteUser: (id: number) => {
     return api.delete(`/admin/users/${id}`)
+  },
+  updateUser: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/users/${id}`, data)
+  },
+
+  // Vendor applications
+  getApplications: () => {
+    return api.get('/admin/applications')
+  },
+  approveApplication: (id: number | string) => {
+    return api.put(`/admin/applications/${id}/approve`)
+  },
+  rejectApplication: (id: number | string) => {
+    return api.put(`/admin/applications/${id}/reject`)
+  },
+
+  // Dashboard
+  getDashboard: () => {
+    return api.get('/admin/dashboard')
+  },
+  getDashboardOrders: (params?: { status?: string; vendor?: string }) => {
+    return api.get('/admin/orders', { params })
+  },
+
+  // Shops
+  getShops: () => {
+    return api.get('/admin/shops')
+  },
+  updateShop: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/shops/${id}`, data)
+  },
+  deleteShop: (id: number | string) => {
+    return api.delete(`/admin/shops/${id}`)
+  },
+
+  // Promos
+  getPromos: () => {
+    return api.get('/admin/promos')
+  },
+  createPromo: (data: Record<string, unknown>) => {
+    return api.post('/admin/promos', data)
+  },
+  updatePromo: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/promos/${id}`, data)
+  },
+  deletePromo: (id: number | string) => {
+    return api.delete(`/admin/promos/${id}`)
+  },
+
+  // Subscriptions
+  getSubscriptions: () => {
+    return api.get('/admin/subscriptions')
+  },
+
+  // Notifications
+  getNotifications: () => {
+    return api.get('/admin/notifications')
+  },
+  markNotificationRead: (id: number) => {
+    return api.put(`/admin/notifications/${id}/read`)
+  },
+  markAllNotificationsRead: () => {
+    return api.put('/admin/notifications/read-all')
+  },
+
+  // Reports
+  getReports: () => {
+    return api.get('/admin/reports')
   },
 }

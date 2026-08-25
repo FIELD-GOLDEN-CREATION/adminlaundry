@@ -71,8 +71,7 @@ export default function RequestsPage() {
             style={{
               padding: '14px 16px', fontSize: 13, fontWeight: 600, textTransform: 'capitalize',
               color: filter === tab ? '#1A5C58' : '#64748B',
-              borderBottom: filter === tab ? '2px solid #1A5C58' : '2px solid transparent',
-              background: 'transparent', border: 'none', cursor: 'pointer',
+              borderBottom: filter === tab ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 6,
             }}
           >

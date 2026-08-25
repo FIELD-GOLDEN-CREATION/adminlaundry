@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+
+import { adminApi } from '../services/api'
 
 export interface VendorApplication {
   id: string
@@ -17,6 +19,7 @@ export interface VendorApplication {
 
 interface VendorApplicationContextType {
   applications: VendorApplication[]
+  isLoadingApplications: boolean
   addApplication: (app: Omit<VendorApplication, 'id' | 'status' | 'submittedAt'>) => void
   approveApplication: (id: string) => void
   rejectApplication: (id: string) => void
@@ -71,13 +74,64 @@ const initialApplications: VendorApplication[] = [
   },
 ]
 
+type ApiApplication = {
+  id: number
+  client_id: number
+  office_name: string
+  office_location: string | null
+  contact_phone: string | null
+  contact_whatsapp: string | null
+  plan: string
+  status: string
+  created_at: string
+  client?: { name?: string; email?: string; phone?: string } | null
+}
+
+function mapApiApplication(a: ApiApplication): VendorApplication {
+  return {
+    id: String(a.id),
+    clientId: String(a.client_id),
+    clientName: a.client?.name ?? '',
+    clientEmail: a.client?.email ?? '',
+    clientPhone: a.client?.phone ?? a.contact_phone ?? '',
+    officeName: a.office_name,
+    officeLocation: a.office_location ?? '',
+    contactPhone: a.contact_phone ?? '',
+    contactWhatsApp: a.contact_whatsapp ?? '',
+    plan: a.plan,
+    status: (a.status as VendorApplication['status']) || 'pending',
+    submittedAt: (a.created_at ?? '').split('T')[0],
+  }
+}
+
 export function VendorApplicationProvider({ children }: { children: ReactNode }) {
   const [applications, setApplications] = useState<VendorApplication[]>(initialApplications)
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true)
+
+  // Load live applications from the backend; fall back to the demo seed if
+  // the API is unreachable so the panel stays usable offline.
+  useEffect(() => {
+    let cancelled = false
+    adminApi
+      .getApplications()
+      .then((res) => {
+        if (cancelled) return
+        const data = res.data?.data
+        if (Array.isArray(data)) setApplications(data.map(mapApiApplication))
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoadingApplications(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const addApplication = (app: Omit<VendorApplication, 'id' | 'status' | 'submittedAt'>) => {
     const newApp: VendorApplication = {
       ...app,
-      id: `app-${String(applications.length + 1).padStart(3, '0')}`,
+      id: `local-${Date.now()}`,
       status: 'pending',
       submittedAt: new Date().toISOString().split('T')[0],
     }
@@ -86,10 +140,12 @@ export function VendorApplicationProvider({ children }: { children: ReactNode })
 
   const approveApplication = (id: string) => {
     setApplications((prev) => prev.map((a) => a.id === id ? { ...a, status: 'approved' as const } : a))
+    adminApi.approveApplication(id).catch(() => {})
   }
 
   const rejectApplication = (id: string) => {
     setApplications((prev) => prev.map((a) => a.id === id ? { ...a, status: 'rejected' as const } : a))
+    adminApi.rejectApplication(id).catch(() => {})
   }
 
   const deleteApplication = (id: string) => {
@@ -102,7 +158,7 @@ export function VendorApplicationProvider({ children }: { children: ReactNode })
 
   return (
     <VendorApplicationContext.Provider value={{
-      applications, addApplication, approveApplication, rejectApplication, deleteApplication, getClientApplication,
+      applications, isLoadingApplications, addApplication, approveApplication, rejectApplication, deleteApplication, getClientApplication,
     }}>
       {children}
     </VendorApplicationContext.Provider>

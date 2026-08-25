@@ -269,8 +269,7 @@ export default function VendorDetailPage() {
             style={{
               padding: '14px 16px', fontSize: 13, fontWeight: 600,
               color: activeTab === tab.id ? '#1A5C58' : '#64748B',
-              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',
-              background: 'transparent', border: 'none', cursor: 'pointer',
+              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
             }}
           >
             {tab.label}
