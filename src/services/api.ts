@@ -107,4 +107,12 @@ export const adminApi = {
   getReports: () => {
     return api.get('/admin/reports')
   },
+
+  // Settings
+  getSettings: () => {
+    return api.get('/admin/settings')
+  },
+  updateSettings: (settings: { key: string; value: string }[]) => {
+    return api.put('/admin/settings', { settings })
+  },
 }
