@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Store } from 'lucide-react'
+import { Plus, Trash2, Store, RefreshCw, Users, UserCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
 import type { User, UserRole } from '@/types'
 
@@ -9,10 +9,6 @@ const roleTabs = [
   { id: 'staff', role: 'staff' as UserRole, label: 'Staff' },
   { id: 'clients', role: 'customer' as UserRole, label: 'Clients' },
 ]
-
-const roleColors: Record<string, string> = {
-  vendor: '#E8F2F1', staff: '#FDF3E3', customer: '#E3EEFF',
-}
 
 interface ShopRow {
   id: number
@@ -33,7 +29,7 @@ export default function MembersPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(role || 'vendors')
   const [searchQuery, setSearchQuery] = useState('')
-  const [users, setUsers] = useState<User[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [shops, setShops] = useState<ShopRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -42,31 +38,33 @@ export default function MembersPage() {
 
   useEffect(() => { if (role) setActiveTab(role) }, [role])
 
-  // Load data based on active tab
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        if (activeTab === 'vendors') {
-          const res = await adminApi.getShops()
-          setShops(res.data.data || res.data.shops || [])
-        } else {
-          const res = await adminApi.getUsers()
-          const data = res.data
-          setUsers(data.users || data.data || [])
-        }
-      } catch (err) {
-        console.error('Failed to load data:', err)
-        setError('Failed to load data from server')
-      } finally {
-        setLoading(false)
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      if (activeTab === 'vendors') {
+        const res = await adminApi.getShops()
+        setShops(res.data.data || res.data.shops || [])
+      } else {
+        const res = await adminApi.getUsers()
+        const data = res.data
+        setAllUsers(data.users || data.data || [])
       }
+    } catch (err: any) {
+      console.error('Failed to load data:', err)
+      if (err?.response?.status === 401) {
+        setError('Session expired. Please log in again.')
+      } else {
+        setError('Failed to load data from server. Check your connection.')
+      }
+    } finally {
+      setLoading(false)
     }
-    loadData()
   }, [activeTab])
 
-  const filteredUsers = users.filter(
+  useEffect(() => { loadData() }, [loadData])
+
+  const filteredUsers = allUsers.filter(
     (u) => u.role === activeTab.replace('clients', 'customer') &&
       (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()))
   )
@@ -76,6 +74,12 @@ export default function MembersPage() {
       (s.owner_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (s.owner_email || '').toLowerCase().includes(searchQuery.toLowerCase()))
   )
+
+  const roleCounts = {
+    customers: allUsers.filter((u) => u.role === 'customer').length,
+    staff: allUsers.filter((u) => u.role === 'staff').length,
+    vendors: allUsers.filter((u) => u.role === 'vendor').length,
+  }
 
   const handleCreateUser = async () => {
     setError('')
@@ -92,7 +96,7 @@ export default function MembersPage() {
         role: activeTab === 'clients' ? 'customer' : (activeTab === 'vendors' ? 'vendor' : 'staff'),
       })
       const created = response.data.user || response.data.data
-      setUsers((prev) => [created, ...prev])
+      setAllUsers((prev) => [created, ...prev])
       setShowCreateModal(false)
       setNewUser({ name: '', email: '', password: '', phone: '' })
     } catch (err: any) {
@@ -105,7 +109,7 @@ export default function MembersPage() {
     if (!confirm('Are you sure you want to delete this user?')) return
     try {
       await adminApi.deleteUser(id)
-      setUsers((prev) => prev.filter((u) => u.id !== id))
+      setAllUsers((prev) => prev.filter((u) => u.id !== id))
     } catch (err) { console.error('Failed to delete user:', err) }
   }
 
@@ -133,16 +137,31 @@ export default function MembersPage() {
           <li className="sep">/</li>
           <li className="current">Members</li>
         </ol>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
-            fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
-            border: 'none', borderRadius: 9, cursor: 'pointer',
-          }}
-        >
-          <Plus size={14} /> {isVendors ? 'Add Vendor' : 'Add User'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+              border: '1px solid #EDE7D9', borderRadius: 9, cursor: loading ? 'wait' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+              border: 'none', borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            <Plus size={14} /> {isVendors ? 'Add Vendor' : activeTab === 'staff' ? 'Add Staff' : 'Add Client'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -151,19 +170,31 @@ export default function MembersPage() {
         background: '#FFFFFF', borderRadius: '14px 14px 0 0', padding: '0 16px',
         boxShadow: '0 1px 2px rgba(15,23,34,0.05), 0 1px 1px rgba(15,23,34,0.03)',
       }}>
-        {roleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setError(''); }}
-            style={{
-              padding: '14px 16px', fontSize: 13, fontWeight: 600,
-              color: activeTab === tab.id ? '#1A5C58' : '#64748B',
-              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {roleTabs.map((tab) => {
+          const count = tab.id === 'vendors' ? shops.length : tab.id === 'staff' ? roleCounts.staff : roleCounts.customers
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchQuery(''); setError(''); }}
+              style={{
+                padding: '14px 16px', fontSize: 13, fontWeight: 600,
+                color: activeTab === tab.id ? '#1A5C58' : '#64748B',
+                borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',
+                background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {tab.label}
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 10,
+                background: activeTab === tab.id ? '#1A5C58' : '#E2E8F0',
+                color: activeTab === tab.id ? '#FFFFFF' : '#64748B',
+              }}>
+                {loading ? '...' : count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Summary */}
@@ -177,14 +208,13 @@ export default function MembersPage() {
             </div>
           </div>
         ) : (
-          <>
-            <div className="panel" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : filteredUsers.length}</div>
-                <div style={{ fontSize: 12, color: '#64748B' }}>{activeTab === 'staff' ? 'Staff' : 'Clients'}</div>
-              </div>
+          <div className="panel" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            {activeTab === 'staff' ? <UserCheck size={18} style={{ color: '#1A5C58' }} /> : <Users size={18} style={{ color: '#1A5C58' }} />}
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : filteredUsers.length}</div>
+              <div style={{ fontSize: 12, color: '#64748B' }}>{activeTab === 'staff' ? 'Staff Members' : 'Registered Clients'}</div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -265,6 +295,7 @@ export default function MembersPage() {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
+                <th>Role</th>
                 <th>Joined</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -282,6 +313,15 @@ export default function MembersPage() {
                   </td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>{user.email}</td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>{user.phone || '—'}</td>
+                  <td>
+                    <span className="status-pill" style={{
+                      background: user.role === 'customer' ? '#E3EEFF' : user.role === 'vendor' ? '#E8F2F1' : '#FDF3E3',
+                      color: user.role === 'customer' ? '#2563EB' : user.role === 'vendor' ? '#1A5C58' : '#D4841A',
+                      fontSize: 11,
+                    }}>
+                      {user.role}
+                    </span>
+                  </td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>{user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}</td>
                   <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => handleDeleteUser(user.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748B', padding: 6, borderRadius: 6 }} title="Delete">
@@ -291,13 +331,15 @@ export default function MembersPage() {
                 </tr>
               ))}
               {filteredUsers.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>No {activeTab} found</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>
+                  No {activeTab === 'clients' ? 'clients' : 'staff'} found. {activeTab === 'clients' ? 'New registrations from the app will appear here.' : ''}
+                </td></tr>
               )}
             </tbody>
           </table>
         )}
         <div className="dt-footer">
-          {loading ? 'Loading...' : isVendors ? `${filteredShops.length} vendors` : `${filteredUsers.length} ${activeTab}`}
+          {loading ? 'Loading...' : isVendors ? `${filteredShops.length} vendors` : `${filteredUsers.length} ${activeTab === 'clients' ? 'clients' : 'staff'}`}
         </div>
       </div>
 
