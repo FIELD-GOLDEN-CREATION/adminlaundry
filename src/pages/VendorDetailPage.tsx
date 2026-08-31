@@ -180,7 +180,7 @@ export default function VendorDetailPage() {
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                 <Star size={18} style={{ color: '#D4841A', fill: '#D4841A' }} />
-                <span style={{ fontSize: 22, fontWeight: 700 }}>{shop.rating_avg?.toFixed(1) || '0.0'}</span>
+                <span style={{ fontSize: 22, fontWeight: 700 }}>{Number(shop.rating_avg || 0).toFixed(1)}</span>
               </div>
               <div style={{ fontSize: 12, color: 'rgba(245,240,232,0.6)' }}>
                 {shop.rating_count || 0} reviews
