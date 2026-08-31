@@ -1,54 +1,109 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, TrendingUp, TrendingDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
+import { adminApi } from '@/services/api'
 
-const customerGrowth = [
-  { month: 'Jan', new: 45, returning: 120, total: 165 },
-  { month: 'Feb', new: 52, returning: 135, total: 187 },
-  { month: 'Mar', new: 61, returning: 148, total: 209 },
-  { month: 'Apr', new: 48, returning: 142, total: 190 },
-  { month: 'May', new: 67, returning: 165, total: 232 },
-  { month: 'Jun', new: 74, returning: 178, total: 252 },
-]
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  phone?: string
+  created_at?: string
+  order_count?: number
+  total_spent?: number
+}
 
-const retentionCohort = [
-  { month: 'Month 1', retained: 100, churned: 0 },
-  { month: 'Month 2', retained: 78, churned: 22 },
-  { month: 'Month 3', retained: 65, churned: 35 },
-  { month: 'Month 4', retained: 58, churned: 42 },
-  { month: 'Month 5', retained: 52, churned: 48 },
-  { month: 'Month 6', retained: 48, churned: 52 },
-]
+interface UsersResponse {
+  success: boolean
+  data: User[] | { users?: User[]; data?: User[] }
+}
 
-const customerSegments = [
-  { name: 'One-time', value: 180, color: '#64748B' },
-  { name: 'Occasional', value: 95, color: '#D4841A' },
-  { name: 'Regular', value: 65, color: '#1F5ECC' },
-  { name: 'Loyal', value: 35, color: '#1A5C58' },
-]
-
-const topCustomers = [
-  { name: 'Amara Koroma', orders: 24, totalSpent: 1080000, lastOrder: '2026-08-23', favoriteVendor: 'Marina Fresh' },
-  { name: 'Jabari Mensah', orders: 18, totalSpent: 720000, lastOrder: '2026-08-22', favoriteVendor: 'Bright & Fold' },
-  { name: 'Nadia Bakari', orders: 15, totalSpent: 650000, lastOrder: '2026-08-21', favoriteVendor: 'Crisp Corner' },
-  { name: 'Daniel Osei', orders: 12, totalSpent: 540000, lastOrder: '2026-08-20', favoriteVendor: 'Marina Fresh' },
-  { name: 'Grace Tambo', orders: 10, totalSpent: 420000, lastOrder: '2026-08-19', favoriteVendor: 'Sparkle Wash' },
-]
-
-const deviceBreakdown = [
-  { device: 'Android', percentage: 72 },
-  { device: 'iOS', percentage: 24 },
-  { device: 'Web', percentage: 4 },
-]
+const pieColors = ['#64748B', '#D4841A', '#1F5ECC', '#1A5C58', '#C0553F']
 
 export default function CustomerReportPage() {
   const [period, setPeriod] = useState('month')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [customers, setCustomers] = useState<User[]>([])
 
-  const totalCustomers = customerGrowth[customerGrowth.length - 1].total
-  const totalNew = customerGrowth.reduce((s, m) => s + m.new, 0)
-  const avgOrderPerCustomer = (topCustomers.reduce((s, c) => s + c.orders, 0) / topCustomers.length).toFixed(1)
-  const avgLifetimeValue = Math.round(topCustomers.reduce((s, c) => s + c.totalSpent, 0) / topCustomers.length)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const res = await adminApi.getUsers('customer')
+        const raw = res.data
+        let list: User[] = []
+        if (Array.isArray(raw)) {
+          list = raw
+        } else if (raw?.data) {
+          list = Array.isArray(raw.data) ? raw.data : (raw.data?.users ?? [])
+        } else if (raw?.users) {
+          list = raw.users
+        }
+        if (!cancelled) setCustomers(list)
+      } catch {
+        if (!cancelled) setError('Failed to load customer data.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const totalCustomers = customers.length
+
+  const customersByMonth = customers.reduce<Record<string, { new: number; returning: number; total: number }>>((acc, c) => {
+    if (c.created_at) {
+      const d = new Date(c.created_at)
+      const key = d.toLocaleString('en-US', { month: 'short' })
+      if (!acc[key]) acc[key] = { new: 0, returning: 0, total: 0 }
+      acc[key].new += 1
+      acc[key].total += 1
+    }
+    return acc
+  }, {})
+
+  const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const customerGrowth = monthOrder
+    .filter((m) => customersByMonth[m])
+    .map((m) => ({ month: m, ...customersByMonth[m] }))
+
+  const topCustomers = [...customers]
+    .sort((a, b) => (b.order_count ?? b.total_spent ?? 0) - (a.order_count ?? a.total_spent ?? 0))
+    .slice(0, 5)
+
+  const totalOrders = customers.reduce((s, c) => s + (c.order_count ?? 0), 0)
+  const avgOrderPerCustomer = totalCustomers > 0 ? (totalOrders / totalCustomers).toFixed(1) : '0'
+  const totalSpent = customers.reduce((s, c) => s + (c.total_spent ?? 0), 0)
+  const avgLifetimeValue = totalCustomers > 0 ? Math.round(totalSpent / totalCustomers) : 0
+
+  const segments = [
+    { name: 'One-time', value: customers.filter((c) => (c.order_count ?? 0) <= 1).length, color: '#64748B' },
+    { name: 'Occasional', value: customers.filter((c) => (c.order_count ?? 0) > 1 && (c.order_count ?? 0) <= 5).length, color: '#D4841A' },
+    { name: 'Regular', value: customers.filter((c) => (c.order_count ?? 0) > 5 && (c.order_count ?? 0) <= 15).length, color: '#1F5ECC' },
+    { name: 'Loyal', value: customers.filter((c) => (c.order_count ?? 0) > 15).length, color: '#1A5C58' },
+  ]
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#64748B' }}>Loading customer report...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#C0553F' }}>{error}</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -79,7 +134,7 @@ export default function CustomerReportPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         {[
           { label: 'Total Customers', value: String(totalCustomers), change: '+14.5%', up: true },
-          { label: 'New Customers', value: String(totalNew), change: '+18%', up: true },
+          { label: 'Total Orders', value: String(totalOrders), change: '+18%', up: true },
           { label: 'Avg Orders / Customer', value: avgOrderPerCustomer },
           { label: 'Avg Lifetime Value', value: formatCurrency(avgLifetimeValue) },
         ].map((kpi) => (
@@ -127,15 +182,15 @@ export default function CustomerReportPage() {
             <div style={{ height: 200, width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={customerSegments} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                    {customerSegments.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                  <Pie data={segments} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
+                    {segments.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                   </Pie>
                   <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 10, fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-              {customerSegments.map((s) => (
+              {segments.map((s) => (
                 <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#64748B' }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />
                   {s.name} ({s.value})
@@ -143,44 +198,6 @@ export default function CustomerReportPage() {
               ))}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Retention & Device row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-        <div className="chart-card">
-          <div className="chart-card-head">
-            <div className="chart-card-title">Customer Retention Curve</div>
-          </div>
-          <div className="chart-card-body">
-            <div style={{ height: 250 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={retentionCohort}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EDE7D9" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 10, fontSize: 12 }} formatter={(v: number) => `${v}%`} />
-                  <Legend />
-                  <Line type="monotone" dataKey="retained" name="Retained" stroke="#1A5C5C" strokeWidth={2} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="churned" name="Churned" stroke="#C0553F" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-        <div className="panel" style={{ padding: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Device Breakdown</div>
-          {deviceBreakdown.map((d) => (
-            <div key={d.device} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>{d.device}</span>
-                <span style={{ fontSize: 12, color: '#64748B' }}>{d.percentage}%</span>
-              </div>
-              <div style={{ height: 8, background: '#F5F0E8', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${d.percentage}%`, background: '#1A5C58', borderRadius: 4 }} />
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -193,25 +210,28 @@ export default function CustomerReportPage() {
           <thead>
             <tr>
               <th>Customer</th>
+              <th>Email</th>
               <th style={{ textAlign: 'right' }}>Orders</th>
               <th style={{ textAlign: 'right' }}>Total Spent</th>
-              <th>Last Order</th>
-              <th>Favorite Vendor</th>
+              <th>Joined</th>
             </tr>
           </thead>
           <tbody>
+            {topCustomers.length === 0 && (
+              <tr><td colSpan={5} style={{ textAlign: 'center', color: '#64748B', padding: 16 }}>No customer data available.</td></tr>
+            )}
             {topCustomers.map((c) => (
-              <tr key={c.name}>
+              <tr key={c.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 11 }}>{c.name.charAt(0)}</div>
+                    <div className="avatar-chip" style={{ width: 30, height: 30, fontSize: 11 }}>{c.name?.charAt(0) ?? '?'}</div>
                     <span style={{ fontWeight: 600, color: '#2C3E50' }}>{c.name}</span>
                   </div>
                 </td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{c.orders}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(c.totalSpent)}</td>
-                <td style={{ color: '#64748B' }}>{c.lastOrder}</td>
-                <td style={{ color: '#64748B' }}>{c.favoriteVendor}</td>
+                <td style={{ color: '#64748B' }}>{c.email}</td>
+                <td style={{ textAlign: 'right', fontWeight: 700 }}>{c.order_count ?? 0}</td>
+                <td style={{ textAlign: 'right', fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(c.total_spent ?? 0)}</td>
+                <td style={{ color: '#64748B' }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</td>
               </tr>
             ))}
           </tbody>

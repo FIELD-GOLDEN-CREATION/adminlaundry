@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MapPin, Clock, ShoppingBag, Heart,
@@ -6,43 +6,18 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useVendorApplications } from '@/contexts/VendorApplicationContext'
+import { adminApi } from '@/services/api'
 import type { CustomerDetail, FavoriteVendor } from '@/types'
 
-const mockCustomer: CustomerDetail = {
-  id: 'c5', name: 'Amara Koroma', email: 'amara@email.com', phone: '+255 723 456 789',
-  authProvider: 'email', registeredAt: '2024-01-15', lastLoginAt: '2026-08-21',
-  status: 'active', totalOrders: 47, totalSpent: 892000,
-  favoriteVendorIds: ['v1', 'v2'],
-  addresses: [
-    { label: 'Home', line: '12 Chole Road, Masaki, Apt 4B' },
-    { label: 'Office', line: '5 Safari Way, CBD, Floor 3' },
-  ],
-  preferences: [
-    { label: 'Push notifications', enabled: true },
-    { label: 'Eco detergent by default', enabled: true },
-    { label: 'Contactless pickup', enabled: false },
-  ],
-  paymentMethods: [
-    { type: 'mobile', label: 'M-Pesa', last4: '7890' },
-    { type: 'mobile', label: 'Mixx By Yas', last4: '3456' },
-  ],
+interface OrderRow {
+  id: string
+  vendor: string
+  items: string
+  total: number
+  status: string
+  date: string
+  payment: string
 }
-
-const mockFavoriteVendors: FavoriteVendor[] = [
-  { id: 'v1', name: 'Marina Fresh', ordersCount: 28, totalSpent: 534000, lastOrderDate: '2026-08-20', rating: 4.8 },
-  { id: 'v2', name: 'Bright & Fold', ordersCount: 19, totalSpent: 358000, lastOrderDate: '2026-08-18', rating: 4.6 },
-]
-
-const mockOrders = [
-  { id: '#4523', vendor: 'Marina Fresh', items: '3x T-Shirt, 1x Trousers', total: 14000, status: 'in_wash', date: '2026-08-21', payment: 'M-Pesa' },
-  { id: '#4519', vendor: 'Bright & Fold', items: '2x Bed Sheet, 1x Blanket', total: 39000, status: 'out_for_delivery', date: '2026-08-20', payment: 'M-Pesa' },
-  { id: '#4516', vendor: 'Marina Fresh', items: '5x T-Shirt, 3x Shirts', total: 27000, status: 'delivered', date: '2026-08-18', payment: 'Mixx By Yas' },
-  { id: '#4512', vendor: 'Marina Fresh', items: '1x Sneakers, 1x Backpack', total: 20000, status: 'delivered', date: '2026-08-15', payment: 'M-Pesa' },
-  { id: '#4508', vendor: 'Bright & Fold', items: '1x Suit, 2x Shirts', total: 23000, status: 'delivered', date: '2026-08-12', payment: 'M-Pesa' },
-  { id: '#4505', vendor: 'Marina Fresh', items: '4x Shirt, 2x Trousers', total: 26000, status: 'delivered', date: '2026-08-10', payment: 'Mixx By Yas' },
-  { id: '#4501', vendor: 'Bright & Fold', items: '8x T-Shirt, 4x Shorts', total: 36000, status: 'delivered', date: '2026-08-07', payment: 'M-Pesa' },
-  { id: '#4498', vendor: 'Marina Fresh', items: '2x Bed Sheet, 2x Pillowcase', total: 22000, status: 'delivered', date: '2026-08-04', payment: 'M-Pesa' },
-]
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A' },
@@ -77,12 +52,97 @@ export default function CustomerDetailPage() {
   const [vendorApp, setVendorApp] = useState({ officeName: '', officeLocation: '', contactPhone: '', contactWhatsApp: '' })
 
   const { getClientApplication, addApplication } = useVendorApplications()
-  const existingApp = getClientApplication(id || 'c5')
+  const existingApp = getClientApplication(id || '')
 
-  const customer = mockCustomer
-  const favVendors = mockFavoriteVendors
-  const orders = mockOrders
+  const [customer, setCustomer] = useState<CustomerDetail | null>(null)
+  const [orders, setOrders] = useState<OrderRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+
+    Promise.all([
+      adminApi.getUser(id),
+      adminApi.getDashboardOrders(),
+    ])
+      .then(([userRes, ordersRes]) => {
+        const u = userRes.data.data
+        const mapped: CustomerDetail = {
+          id: String(u.id),
+          name: u.name,
+          email: u.email,
+          phone: u.phone || '',
+          authProvider: u.firebase_uid ? 'google' : 'email',
+          photoUrl: u.photo_url,
+          registeredAt: u.created_at,
+          lastLoginAt: u.created_at,
+          status: 'active',
+          totalOrders: u.total_orders ?? 0,
+          totalSpent: u.total_spent ?? 0,
+          favoriteVendorIds: [],
+          addresses: [],
+          preferences: [
+            { label: 'Push notifications', enabled: true },
+            { label: 'Eco detergent by default', enabled: true },
+            { label: 'Contactless pickup', enabled: false },
+          ],
+          paymentMethods: [],
+        }
+        setCustomer(mapped)
+
+        const allOrders = ordersRes.data.data ?? []
+        const filtered = allOrders
+          .filter((o: any) => String(o.client?.id) === String(u.id) || String(o.user_id) === String(u.id))
+          .map((o: any) => ({
+            id: `#${o.id}`,
+            vendor: o.vendor_name || o.shop_name || o.vendor || 'Unknown',
+            items: typeof o.items === 'number' ? `${o.items} items` : (o.items_summary || `${o.items ?? 0} items`),
+            total: o.total ?? 0,
+            status: o.status ?? 'pending',
+            date: o.created_at?.slice(0, 10) ?? '',
+            payment: o.payment_method || o.payment || 'M-Pesa',
+          }))
+        setOrders(filtered)
+      })
+      .catch(() => setError('Failed to load customer details.'))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 36, height: 36, border: '3px solid #EDE7D9', borderTopColor: '#1A5C58', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+          <span style={{ fontSize: 13, color: '#64748B', fontWeight: 600 }}>Loading customer details...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !customer) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: '#C0553F', fontWeight: 600 }}>{error || 'Customer not found'}</p>
+          <button
+            onClick={() => navigate('/members/clients')}
+            style={{
+              marginTop: 12, padding: '9px 14px', fontSize: 12.5, fontWeight: 700,
+              color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9',
+              borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            Back to Clients
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const favVendors: FavoriteVendor[] = []
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'orders', label: 'Orders' },
@@ -195,9 +255,9 @@ export default function CustomerDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
         {[
           { label: 'Total Orders', value: customer.totalOrders.toString(), icon: ShoppingBag, color: '#1A5C58' },
-          { label: 'Total Spent', value: formatCurrency(customer.totalSpent), icon: TrendingUp, color: '#D4841A' },
+          { label: 'Total Spent', value: `TZS ${customer.totalSpent.toLocaleString()}`, icon: TrendingUp, color: '#D4841A' },
           { label: 'Favorite Vendors', value: customer.favoriteVendorIds.length.toString(), icon: Heart, color: '#C0553F' },
-          { label: 'Avg Order Value', value: formatCurrency(avgOrderValue), icon: CreditCard, color: '#1F5ECC' },
+          { label: 'Avg Order Value', value: `TZS ${avgOrderValue.toLocaleString()}`, icon: CreditCard, color: '#1F5ECC' },
         ].map((kpi) => (
           <div key={kpi.label} className="panel" style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -234,7 +294,8 @@ export default function CustomerDetailPage() {
             style={{
               padding: '14px 16px', fontSize: 13, fontWeight: 600,
               color: activeTab === tab.id ? '#1A5C58' : '#64748B',
-              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
+              borderBottom: activeTab === tab.id ? '2px solid #1A5C58' : '2px solid transparent',
+              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
             }}
           >
             {tab.label}
@@ -274,7 +335,7 @@ export default function CustomerDetailPage() {
           <div className="panel" style={{ padding: 20 }}>
             <div className="panel-title" style={{ marginBottom: 16 }}>Saved Addresses</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {customer.addresses.map((addr) => (
+              {customer.addresses.length > 0 ? customer.addresses.map((addr) => (
                 <div key={addr.label} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 10,
                   padding: '12px 14px', borderRadius: 10,
@@ -286,7 +347,9 @@ export default function CustomerDetailPage() {
                     <div style={{ fontSize: 13, color: '#2C3E50', marginTop: 2 }}>{addr.line}</div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p style={{ fontSize: 13, color: '#94A3B8' }}>No saved addresses</p>
+              )}
             </div>
           </div>
 
@@ -322,7 +385,7 @@ export default function CustomerDetailPage() {
           <div className="panel" style={{ padding: 20 }}>
             <div className="panel-title" style={{ marginBottom: 16 }}>Payment Methods</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {customer.paymentMethods.map((pm) => (
+              {customer.paymentMethods.length > 0 ? customer.paymentMethods.map((pm) => (
                 <div key={pm.label} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 14px', borderRadius: 10,
@@ -343,7 +406,9 @@ export default function CustomerDetailPage() {
                   </div>
                   <Check size={14} style={{ color: '#1A7A5C' }} />
                 </div>
-              ))}
+              )) : (
+                <p style={{ fontSize: 13, color: '#94A3B8' }}>No payment methods on file</p>
+              )}
             </div>
           </div>
         </div>
@@ -399,10 +464,17 @@ export default function CustomerDetailPage() {
                         {order.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(order.total)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>TZS {order.total.toLocaleString()}</td>
                   </tr>
                 )
               })}
+              {orders.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#94A3B8', fontSize: 13 }}>
+                    No orders found for this customer
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           <div className="dt-footer">Order history for {customer.name}</div>
@@ -446,7 +518,7 @@ export default function CustomerDetailPage() {
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Orders</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50' }}>{formatCurrency(vendor.totalSpent)}</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50' }}>TZS {vendor.totalSpent.toLocaleString()}</div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Total Spent</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
@@ -534,7 +606,7 @@ export default function CustomerDetailPage() {
                 onClick={() => {
                   if (!vendorApp.officeName.trim()) return
                   addApplication({
-                    clientId: id || 'c5',
+                    clientId: id || '',
                     clientName: customer.name,
                     clientEmail: customer.email,
                     clientPhone: customer.phone,

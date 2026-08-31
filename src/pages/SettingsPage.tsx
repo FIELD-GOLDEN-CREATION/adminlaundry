@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Camera, Save, Lock, LogOut } from 'lucide-react'
+import { adminApi } from '@/services/api'
+import { useAuth } from '@/contexts/AuthContext'
 
 const permissions = [
   { id: 'manage_orders', label: 'Manage Orders', description: 'View, edit, and process all orders' },
@@ -25,13 +27,62 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function SettingsPage() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('Account')
+  const [loading, setLoading] = useState(true)
   const [permissionsState, setPermissionsState] = useState<Record<string, boolean>>({
     manage_orders: true, manage_members: true, edit_vendor_pricing: false, view_financial_reports: true,
   })
   const [notificationState, setNotificationState] = useState<Record<string, boolean>>({
     mute_sounds: false, desktop_push: true, delayed_pickup: true,
   })
+
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        setLoading(true)
+        const res = await adminApi.getSettings()
+        const settings: { key: string; value: string; group: string }[] = res.data.data?.settings || []
+        const perms: Record<string, boolean> = {}
+        const notifs: Record<string, boolean> = {}
+        settings.forEach(({ key, value }) => {
+          if (permissions.find((p) => p.id === key)) {
+            perms[key] = value === 'true'
+          }
+          if (notificationSettings.find((n) => n.id === key)) {
+            notifs[key] = value === 'true'
+          }
+        })
+        setPermissionsState((prev) => ({ ...prev, ...perms }))
+        setNotificationState((prev) => ({ ...prev, ...notifs }))
+      } catch (err) {
+        console.error('Failed to load settings:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  const handleSaveSettings = async () => {
+    const allKeys = [
+      ...Object.keys(permissionsState).map((k) => ({ key: k, value: String(permissionsState[k]) })),
+      ...Object.keys(notificationState).map((k) => ({ key: k, value: String(notificationState[k]) })),
+    ]
+    try {
+      await adminApi.updateSettings(allKeys)
+    } catch (err) {
+      console.error('Failed to save settings:', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+        <div style={{ fontSize: 14, color: '#64748B' }}>Loading settings...</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -57,7 +108,8 @@ export default function SettingsPage() {
             style={{
               padding: '14px 16px', fontSize: 13, fontWeight: 600,
               color: activeTab === tab ? '#1A5C58' : '#64748B',
-              borderBottom: activeTab === tab ? '2px solid #1A5C58' : '2px solid transparent',              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
+              borderBottom: activeTab === tab ? '2px solid #1A5C58' : '2px solid transparent',
+              background: 'transparent', borderTop: 'none', borderLeft: 'none', borderRight: 'none', cursor: 'pointer',
             }}
           >
             {tab}
@@ -73,7 +125,9 @@ export default function SettingsPage() {
             <div>
               <div className="panel-title" style={{ marginBottom: 12 }}>Profile Photo</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div className="avatar-chip" style={{ width: 64, height: 64, fontSize: 24 }}>A</div>
+                <div className="avatar-chip" style={{ width: 64, height: 64, fontSize: 24 }}>
+                  {user?.name?.[0]?.toUpperCase() || 'A'}
+                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
@@ -97,10 +151,10 @@ export default function SettingsPage() {
               <div className="panel-title" style={{ marginBottom: 12 }}>Personal Details</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[
-                  { label: 'Full Name', value: 'Admin User' },
-                  { label: 'Email', value: 'admin@freshfold.com' },
-                  { label: 'Phone', value: '+255 123 456 789' },
-                  { label: 'Location', value: 'Dar es Salaam' },
+                  { label: 'Full Name', value: user?.name || '' },
+                  { label: 'Email', value: user?.email || '' },
+                  { label: 'Phone', value: user?.phone || '' },
+                  { label: 'Location', value: '' },
                 ].map((field) => (
                   <div key={field.label}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>
@@ -179,6 +233,16 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+            <button
+              onClick={handleSaveSettings}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+                fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+                border: 'none', borderRadius: 9, cursor: 'pointer', marginTop: 16,
+              }}
+            >
+              <Save size={14} /> Save Changes
+            </button>
           </div>
         )}
 
@@ -204,6 +268,16 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+            <button
+              onClick={handleSaveSettings}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+                fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+                border: 'none', borderRadius: 9, cursor: 'pointer', marginTop: 16,
+              }}
+            >
+              <Save size={14} /> Save Changes
+            </button>
           </div>
         )}
 

@@ -1,41 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Printer, TrendingUp, TrendingDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
+import { adminApi } from '@/services/api'
 
-const weeklyOrders = [
-  { day: 'Mon', completed: 42, cancelled: 3, refunded: 1 },
-  { day: 'Tue', completed: 47, cancelled: 5, refunded: 2 },
-  { day: 'Wed', completed: 44, cancelled: 4, refunded: 0 },
-  { day: 'Thu', completed: 54, cancelled: 7, refunded: 3 },
-  { day: 'Fri', completed: 49, cancelled: 6, refunded: 1 },
-  { day: 'Sat', completed: 59, cancelled: 8, refunded: 2 },
-  { day: 'Sun', completed: 38, cancelled: 4, refunded: 1 },
-]
+interface RevenueDay {
+  day: string
+  revenue_tzs: number
+  orders: number
+}
 
-const statusBreakdown = [
-  { name: 'Delivered', value: 520, color: '#1A7A5C' },
-  { name: 'In Progress', value: 145, color: '#1F5ECC' },
-  { name: 'Cancelled', value: 48, color: '#C0553F' },
-  { name: 'Refunded', value: 22, color: '#64748B' },
-  { name: 'Pending', value: 35, color: '#D4841A' },
-]
+interface ShopEntry {
+  shop_name?: string
+  name?: string
+  total_revenue?: number
+  revenue?: number
+  order_count?: number
+  orders?: number
+  average_rating?: number
+}
 
-const topVendors = [
-  { name: 'Marina Fresh', orders: 187, revenue: 8200000, avgTime: '2.4h', rating: 4.8 },
-  { name: 'Bright & Fold', orders: 156, revenue: 6900000, avgTime: '2.1h', rating: 4.7 },
-  { name: 'Crisp Corner', orders: 134, revenue: 5800000, avgTime: '2.8h', rating: 4.5 },
-  { name: 'Fresh Press Co.', orders: 98, revenue: 4300000, avgTime: '3.1h', rating: 4.3 },
-  { name: 'Sparkle Wash', orders: 72, revenue: 3200000, avgTime: '2.6h', rating: 4.6 },
-]
-
-const recentOrders = [
-  { id: '#4523', client: 'Amara K.', vendor: 'Marina Fresh', total: 45000, status: 'delivered', date: '2026-08-23' },
-  { id: '#4522', client: 'Jabari M.', vendor: 'Bright & Fold', total: 32000, status: 'in_progress', date: '2026-08-23' },
-  { id: '#4521', client: 'Nadia B.', vendor: 'Crisp Corner', total: 28000, status: 'pending', date: '2026-08-23' },
-  { id: '#4520', client: 'Daniel O.', vendor: 'Marina Fresh', total: 55000, status: 'delivered', date: '2026-08-22' },
-  { id: '#4519', client: 'Grace T.', vendor: 'Bright & Fold', total: 41000, status: 'cancelled', date: '2026-08-22' },
-]
+interface ReportsData {
+  revenue_by_day: RevenueDay[]
+  top_shops: ShopEntry[]
+  orders_by_status: Record<string, number>
+  users_by_role: Record<string, number>
+}
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
   delivered: { bg: '#DFF5ED', fg: '#1A7A5C' },
@@ -43,15 +33,75 @@ const statusColors: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A' },
   cancelled: { bg: '#F3D5CE', fg: '#C0553F' },
   refunded: { bg: '#F1F5F9', fg: '#64748B' },
+  completed: { bg: '#DFF5ED', fg: '#1A7A5C' },
+  active: { bg: '#DFF5ED', fg: '#1A7A5C' },
 }
+
+const pieColors = ['#1A7A5C', '#1F5ECC', '#C0553F', '#64748B', '#D4841A', '#8B5CF6']
 
 export default function OrdersReportPage() {
   const [period, setPeriod] = useState('week')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [revenueByDay, setRevenueByDay] = useState<RevenueDay[]>([])
+  const [topShops, setTopShops] = useState<ShopEntry[]>([])
+  const [ordersByStatus, setOrdersByStatus] = useState<Record<string, number>>({})
 
-  const totalOrders = weeklyOrders.reduce((s, d) => s + d.completed + d.cancelled + d.refunded, 0)
-  const totalCompleted = weeklyOrders.reduce((s, d) => s + d.completed, 0)
-  const totalCancelled = weeklyOrders.reduce((s, d) => s + d.cancelled, 0)
-  const successRate = ((totalCompleted / totalOrders) * 100).toFixed(1)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const res = await adminApi.getReports()
+        const d: ReportsData = res.data?.data ?? res.data
+        if (!cancelled) {
+          setRevenueByDay(d.revenue_by_day ?? [])
+          setTopShops(d.top_shops ?? [])
+          setOrdersByStatus(d.orders_by_status ?? {})
+        }
+      } catch {
+        if (!cancelled) setError('Failed to load orders report.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const weeklyOrders = revenueByDay.map((r) => ({
+    day: r.day,
+    completed: r.orders,
+    revenue: r.revenue_tzs,
+  }))
+
+  const totalOrders = revenueByDay.reduce((s, r) => s + r.orders, 0)
+  const statusBreakdown = Object.entries(ordersByStatus).map(([name, value], i) => ({
+    name,
+    value,
+    color: pieColors[i % pieColors.length],
+  }))
+
+  const totalStatusOrders = statusBreakdown.reduce((s, e) => s + e.value, 0)
+  const deliveredCount = ordersByStatus['delivered'] ?? ordersByStatus['completed'] ?? 0
+  const successRate = totalStatusOrders > 0 ? ((deliveredCount / totalStatusOrders) * 100).toFixed(1) : '0.0'
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#64748B' }}>Loading orders report...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#C0553F' }}>{error}</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -88,8 +138,8 @@ export default function OrdersReportPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         {[
           { label: 'Total Orders', value: totalOrders.toLocaleString(), color: '#E8F2F1' },
-          { label: 'Completed', value: totalCompleted.toLocaleString(), color: '#DFF5ED', change: '+8.3%', up: true },
-          { label: 'Cancelled', value: totalCancelled.toLocaleString(), color: '#F3D5CE', change: '+4.2%', up: false },
+          { label: 'Delivered', value: deliveredCount.toLocaleString(), color: '#DFF5ED', change: '+8.3%', up: true },
+          { label: 'Cancelled', value: (ordersByStatus['cancelled'] ?? 0).toLocaleString(), color: '#F3D5CE', change: '+4.2%', up: false },
           { label: 'Success Rate', value: `${successRate}%`, color: '#E3EEFF' },
         ].map((kpi) => (
           <div key={kpi.label} className="panel" style={{ padding: 18 }}>
@@ -121,9 +171,8 @@ export default function OrdersReportPage() {
                   <YAxis tick={{ fontSize: 12, fill: '#64748B' }} />
                   <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 10, fontSize: 12 }} />
                   <Legend />
-                  <Bar dataKey="completed" name="Completed" fill="#1A7A5C" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="cancelled" name="Cancelled" fill="#C0553F" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="refunded" name="Refunded" fill="#64748B" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed" name="Orders" fill="#1A7A5C" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" name="Revenue (TZS)" fill="#1F5ECC" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -159,66 +208,35 @@ export default function OrdersReportPage() {
       {/* Top vendors table */}
       <div className="data-table-card">
         <div className="dt-head">
-          <span className="dt-title">Top Vendors by Orders</span>
+          <span className="dt-title">Top Shops by Orders</span>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th>Vendor</th>
+              <th>Shop</th>
               <th style={{ textAlign: 'right' }}>Orders</th>
               <th style={{ textAlign: 'right' }}>Revenue</th>
-              <th style={{ textAlign: 'center' }}>Avg Time</th>
               <th style={{ textAlign: 'center' }}>Rating</th>
             </tr>
           </thead>
           <tbody>
-            {topVendors.map((v) => (
-              <tr key={v.name}>
-                <td style={{ fontWeight: 600, color: '#2C3E50' }}>{v.name}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{v.orders}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(v.revenue)}</td>
-                <td style={{ textAlign: 'center', color: '#64748B' }}>{v.avgTime}</td>
+            {topShops.length === 0 && (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: '#64748B', padding: 16 }}>No shop data available.</td></tr>
+            )}
+            {topShops.map((v) => (
+              <tr key={v.shop_name ?? v.name}>
+                <td style={{ fontWeight: 600, color: '#2C3E50' }}>{v.shop_name ?? v.name}</td>
+                <td style={{ textAlign: 'right', fontWeight: 700 }}>{v.order_count ?? v.orders ?? 0}</td>
+                <td style={{ textAlign: 'right', fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(v.total_revenue ?? v.revenue ?? 0)}</td>
                 <td style={{ textAlign: 'center' }}>
-                  <span style={{ background: '#FDF3E3', color: '#D4841A', padding: '3px 8px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-                    ★ {v.rating}
-                  </span>
+                  {v.average_rating != null && (
+                    <span style={{ background: '#FDF3E3', color: '#D4841A', padding: '3px 8px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+                      ★ {v.average_rating}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Recent orders */}
-      <div className="data-table-card">
-        <div className="dt-head">
-          <span className="dt-title">Recent Orders</span>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Client</th>
-              <th>Vendor</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th style={{ textAlign: 'right' }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentOrders.map((o) => {
-              const sc = statusColors[o.status] || statusColors.pending
-              return (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 700 }}>{o.id}</td>
-                  <td>{o.client}</td>
-                  <td style={{ color: '#64748B' }}>{o.vendor}</td>
-                  <td><span className="status-pill" style={{ background: sc.bg, color: sc.fg }}>{o.status.replace(/_/g, ' ')}</span></td>
-                  <td style={{ color: '#64748B' }}>{o.date}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(o.total)}</td>
-                </tr>
-              )
-            })}
           </tbody>
         </table>
       </div>

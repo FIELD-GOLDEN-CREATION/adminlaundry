@@ -1,25 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Minus, ArrowRight, BarChart3, ShoppingCart, CreditCard, Repeat, Users, Truck } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-
-const overviewMetrics: { label: string; value: string; change: number; trend: 'up' | 'down' | 'neutral'; color: string }[] = [
-  { label: 'Total Revenue', value: 'TZS 12.4M', change: 12.5, trend: 'up', color: '#1A5C58' },
-  { label: 'Total Orders', value: '1,284', change: 8.3, trend: 'up', color: '#1F5ECC' },
-  { label: 'Active Vendors', value: '32', change: 2, trend: 'up', color: '#D4841A' },
-  { label: 'Active Subscriptions', value: '42', change: 5.1, trend: 'up', color: '#8B5CF6' },
-  { label: 'Success Rate', value: '94.6%', change: 0, trend: 'neutral', color: '#64748B' },
-  { label: 'Avg Order Value', value: 'TZS 42.5K', change: 3.2, trend: 'up', color: '#1A7A5C' },
-]
-
-const weeklyData = [
-  { day: 'Mon', revenue: 2400000, orders: 45, cancelled: 3 },
-  { day: 'Tue', revenue: 3100000, orders: 52, cancelled: 5 },
-  { day: 'Wed', revenue: 2800000, orders: 48, cancelled: 4 },
-  { day: 'Thu', revenue: 3600000, orders: 61, cancelled: 7 },
-  { day: 'Fri', revenue: 3200000, orders: 55, cancelled: 6 },
-  { day: 'Sat', revenue: 4100000, orders: 67, cancelled: 8 },
-  { day: 'Sun', revenue: 2500000, orders: 42, cancelled: 4 },
-]
+import { adminApi } from '@/services/api'
 
 const quickLinks = [
   { label: 'Orders Report', description: 'Order trends, status breakdown, cancellation analysis', icon: ShoppingCart, path: '/reports/orders', color: '#E3EEFF', fg: '#1F5ECC' },
@@ -30,8 +13,86 @@ const quickLinks = [
   { label: 'Vendor Load', description: 'Current vendor capacity and queue status', icon: BarChart3, path: '/reports/vendor-load', color: '#F1F5F9', fg: '#64748B' },
 ]
 
+function formatTZS(value: number): string {
+  if (value >= 1_000_000) return `TZS ${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `TZS ${(value / 1_000).toFixed(1)}K`
+  return `TZS ${value.toLocaleString()}`
+}
+
 export default function ReportsPage() {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [overviewMetrics, setOverviewMetrics] = useState<{ label: string; value: string; change: number; trend: 'up' | 'down' | 'neutral'; color: string }[]>([])
+  const [weeklyData, setWeeklyData] = useState<{ day: string; revenue: number; orders: number; cancelled: number }[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchReports() {
+      try {
+        setLoading(true)
+        setError(null)
+        const res = await adminApi.getReports()
+        if (cancelled) return
+
+        if (res.data?.success) {
+          const { revenue_by_day, top_shops, orders_by_status, users_by_role } = res.data.data
+
+          const totalRevenue = revenue_by_day.reduce((s: number, d: any) => s + (d.revenue_tzs || 0), 0)
+          const totalOrders = revenue_by_day.reduce((s: number, d: any) => s + (d.orders || 0), 0)
+          const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+          const totalCancelled = orders_by_status?.cancelled ?? 0
+          const totalDelivered = orders_by_status?.delivered ?? 0
+          const successRate = totalDelivered + totalCancelled > 0 ? ((totalDelivered / (totalDelivered + totalCancelled)) * 100) : 0
+
+          const activeVendors = users_by_role?.vendor ?? 0
+          const activeSubscriptions = res.data.data.users_by_role?.vendor ?? 0
+
+          setOverviewMetrics([
+            { label: 'Total Revenue', value: formatTZS(totalRevenue), change: 0, trend: 'neutral', color: '#1A5C58' },
+            { label: 'Total Orders', value: totalOrders.toLocaleString(), change: 0, trend: 'neutral', color: '#1F5ECC' },
+            { label: 'Active Vendors', value: String(activeVendors), change: 0, trend: 'neutral', color: '#D4841A' },
+            { label: 'Active Subscriptions', value: String(activeSubscriptions), change: 0, trend: 'neutral', color: '#8B5CF6' },
+            { label: 'Success Rate', value: `${successRate.toFixed(1)}%`, change: 0, trend: 'neutral', color: '#64748B' },
+            { label: 'Avg Order Value', value: formatTZS(avgOrderValue), change: 0, trend: 'neutral', color: '#1A7A5C' },
+          ])
+
+          setWeeklyData(
+            revenue_by_day.map((d: any) => ({
+              day: d.day,
+              revenue: d.revenue_tzs || 0,
+              orders: d.orders || 0,
+              cancelled: 0,
+            }))
+          )
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err?.response?.data?.message || err?.message || 'Failed to load reports')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchReports()
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', color: '#64748B', fontSize: 14 }}>
+        Loading reports...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', color: '#C0553F', fontSize: 14 }}>
+        {error}
+      </div>
+    )
+  }
 
   return (
     <div>

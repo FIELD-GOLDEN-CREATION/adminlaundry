@@ -1,28 +1,94 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Printer } from 'lucide-react'
+import { adminApi } from '@/services/api'
 
-const vendorData = [
-  { name: 'Marina Fresh', ordersToday: 52, queue: 12, status: 'heavy' },
-  { name: 'Bright & Fold', ordersToday: 38, queue: 8, status: 'healthy' },
-  { name: 'Crisp Corner', ordersToday: 15, queue: 3, status: 'idle' },
-]
+interface ShopEntry {
+  shop_name?: string
+  name?: string
+  order_count?: number
+  orders?: number
+  total_revenue?: number
+  revenue?: number
+  status?: string
+  queue?: number
+}
+
+interface ReportsData {
+  revenue_by_day: { day: string; revenue_tzs: number; orders: number }[]
+  top_shops: ShopEntry[]
+  orders_by_status: Record<string, number>
+  users_by_role: Record<string, number>
+}
 
 const statusConfig: Record<string, { label: string; bg: string; fg: string }> = {
   healthy: { label: 'Healthy', bg: '#DFF5ED', fg: '#1A7A5C' },
   heavy: { label: 'Heavy', bg: '#F3D5CE', fg: '#C0553F' },
   idle: { label: 'Idle', bg: '#F1F5F9', fg: '#64748B' },
+  active: { label: 'Active', bg: '#DFF5ED', fg: '#1A7A5C' },
+  inactive: { label: 'Idle', bg: '#F1F5F9', fg: '#64748B' },
+}
+
+function deriveLoadStatus(orderCount: number): string {
+  if (orderCount >= 40) return 'heavy'
+  if (orderCount >= 15) return 'healthy'
+  return 'idle'
 }
 
 export default function VendorLoadReportPage() {
   const [dateRange, setDateRange] = useState('today')
   const [selectedVendor, setSelectedVendor] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [vendorData, setVendorData] = useState<ShopEntry[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const res = await adminApi.getReports()
+        const d: ReportsData = res.data?.data ?? res.data
+        if (!cancelled) setVendorData(d.top_shops ?? [])
+      } catch {
+        if (!cancelled) setError('Failed to load vendor load data.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const enrichedVendors = vendorData.map((v) => ({
+    name: v.shop_name ?? v.name ?? 'Unknown',
+    ordersToday: v.order_count ?? v.orders ?? 0,
+    queue: v.queue ?? Math.max(0, (v.order_count ?? v.orders ?? 0) - 20),
+    status: v.status ?? deriveLoadStatus(v.order_count ?? v.orders ?? 0),
+  }))
 
   const filteredVendors = selectedVendor === 'all'
-    ? vendorData
-    : vendorData.filter((v) => v.name === selectedVendor)
+    ? enrichedVendors
+    : enrichedVendors.filter((v) => v.name === selectedVendor)
 
   const totalOrders = filteredVendors.reduce((sum, v) => sum + v.ordersToday, 0)
   const totalQueue = filteredVendors.reduce((sum, v) => sum + v.queue, 0)
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#64748B' }}>Loading vendor load report...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <div style={{ fontSize: 14, color: '#C0553F' }}>{error}</div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -88,7 +154,7 @@ export default function VendorLoadReportPage() {
             }}
           >
             <option value="all">All Vendors</option>
-            {vendorData.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+            {enrichedVendors.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
           </select>
         </div>
       </div>
@@ -123,8 +189,11 @@ export default function VendorLoadReportPage() {
             </tr>
           </thead>
           <tbody>
+            {filteredVendors.length === 0 && (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: '#64748B', padding: 16 }}>No vendor data available.</td></tr>
+            )}
             {filteredVendors.map((vendor) => {
-              const sc = statusConfig[vendor.status]
+              const sc = statusConfig[vendor.status] ?? statusConfig.idle
               return (
                 <tr key={vendor.name}>
                   <td style={{ fontWeight: 600, color: '#2C3E50' }}>{vendor.name}</td>

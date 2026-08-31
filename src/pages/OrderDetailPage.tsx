@@ -1,71 +1,44 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   ArrowLeft, User, Store, Truck, Phone, Mail, MapPin,
-  Clock, CreditCard, Check, Package,
+  Clock, CreditCard, Check, Package, Loader2, AlertCircle,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatTime } from '@/lib/utils'
+import { adminApi } from '@/services/api'
 
 interface OrderLine {
-  name: string
+  id: number
+  item_name: string
   qty: number
-  unitPrice: number
+  unit_price_tzs: number
+  total_tzs: number
 }
 
-interface TrackStep {
-  title: string
-  time: string
-  done: boolean
-  current: boolean
+interface TrackingStep {
+  status: string
+  created_at: string
+  note: string | null
 }
 
-const mockOrder = {
-  id: '#4523',
-  date: '2026-08-21',
-  time: '9:12 AM',
-  status: 'in_wash',
-  fulfillment: 'delivery' as const,
-  paymentMethod: 'Mobile money - M-Pesa',
-  pickupAddress: '12 Chole Road, Masaki, Apt 4B',
-  pickupWindow: 'Thu 21, 6 - 8 PM',
-  deliveryFee: 3000,
-  notes: 'Please handle delicate items with care',
+interface OrderData {
+  id: number
+  shop_id: number
+  customer_id: number
+  status: string
+  payment_status: string
+  total_tzs: number
+  delivery_fee_tzs: number
+  delivery_address: string | null
+  notes: string | null
+  created_at: string
+  shop: { name: string; [key: string]: unknown }
+  customer: { name: string; email: string; phone: string; [key: string]: unknown }
+  driver: { name: string; phone?: string; [key: string]: unknown } | null
+  lines: OrderLine[]
+  addons: unknown[]
+  tracking: TrackingStep[]
 }
-
-const mockClient = {
-  name: 'Amara Koroma',
-  email: 'amara@email.com',
-  phone: '+255 723 456 789',
-  address: '12 Chole Road, Masaki, Apt 4B',
-}
-
-const mockVendor = {
-  name: 'Marina Fresh',
-  email: 'marina@freshfold.com',
-  phone: '+255 712 345 678',
-  location: 'Kariakoo, Dar es Salaam',
-  rating: 4.8,
-}
-
-const mockDriver = {
-  name: 'Daniel Kimani',
-  phone: '+255 734 567 890',
-  rating: 4.7,
-}
-
-const mockLines: OrderLine[] = [
-  { name: 'The Student Bag', qty: 1, unitPrice: 34000 },
-  { name: 'Ironing', qty: 3, unitPrice: 5200 },
-  { name: 'Delicate fabric treatment', qty: 1, unitPrice: 10400 },
-]
-
-const mockTrackSteps: TrackStep[] = [
-  { title: 'Order placed', time: 'Wed, 8:30 AM', done: true, current: false },
-  { title: 'Picked up', time: 'Wed, 9:12 AM', done: true, current: false },
-  { title: 'Sorted & counted', time: 'Wed, 10:40 AM', done: true, current: false },
-  { title: 'Washing in progress', time: 'Wed, 2:15 PM', done: false, current: true },
-  { title: 'Out for delivery', time: 'Est. Thu, 6:00 PM', done: false, current: false },
-  { title: 'Delivered', time: '--', done: false, current: false },
-]
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A' },
@@ -74,6 +47,25 @@ const statusColors: Record<string, { bg: string; fg: string }> = {
   out_for_delivery: { bg: '#FDE8D4', fg: '#CF6A2C' },
   delivered: { bg: '#DFF5ED', fg: '#1A7A5C' },
   cancelled: { bg: '#F3D5CE', fg: '#C0553F' },
+  confirmed: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  processing: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  picked_up: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  washing: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  sorting: { bg: '#E3EEFF', fg: '#1F5ECC' },
+  ironing: { bg: '#E3EEFF', fg: '#1F5ECC' },
+}
+
+const trackingStatusLabels: Record<string, string> = {
+  pending: 'Order placed',
+  confirmed: 'Order confirmed',
+  picked_up: 'Picked up',
+  sorting: 'Sorted & counted',
+  washing: 'Washing in progress',
+  ironing: 'Ironing',
+  ready: 'Ready for delivery',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 }
 
 const vendorColor = '#1A5C58'
@@ -81,17 +73,90 @@ const vendorColor = '#1A5C58'
 export default function OrderDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [orderData, setOrderData] = useState<OrderData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const order = mockOrder
-  const client = mockClient
-  const vendor = mockVendor
-  const driver = mockDriver
-  const lines = mockLines
-  const steps = mockTrackSteps
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+    adminApi.getOrder(id)
+      .then((res) => {
+        setOrderData(res.data.data)
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message || 'Failed to load order')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id])
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '60vh', gap: 16,
+      }}>
+        <Loader2 size={32} style={{ color: '#1A5C58', animation: 'spin 1s linear infinite' }} />
+        <div style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>Loading order details...</div>
+      </div>
+    )
+  }
+
+  if (error || !orderData) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '60vh', gap: 16,
+      }}>
+        <AlertCircle size={32} style={{ color: '#C0553F' }} />
+        <div style={{ fontSize: 14, color: '#C0553F', fontWeight: 600 }}>{error || 'Order not found'}</div>
+        <button
+          onClick={() => navigate('/orders')}
+          style={{
+            padding: '8px 16px', fontSize: 13, fontWeight: 700, color: '#64748B',
+            background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+          }}
+        >
+          Back to Orders
+        </button>
+      </div>
+    )
+  }
+
+  const order = orderData
+  const client = order.customer
+  const shop = order.shop
+  const driver = order.driver
+  const lines = order.lines
+  const tracking = order.tracking || []
 
   const sc = statusColors[order.status] || statusColors.pending
-  const subtotal = lines.reduce((sum, l) => sum + l.qty * l.unitPrice, 0)
-  const total = subtotal + order.deliveryFee
+  const subtotal = lines.reduce((sum, l) => sum + l.total_tzs, 0)
+
+  const createdDate = new Date(order.created_at)
+  const formattedDate = createdDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  const formattedTime = formatTime(order.created_at)
+
+  const steps = tracking.map((t, i) => {
+    const isLast = i === tracking.length - 1
+    return {
+      title: trackingStatusLabels[t.status] || t.status.replace(/_/g, ' '),
+      time: isLast ? formatTime(t.created_at) : formatTime(t.created_at),
+      done: !isLast,
+      current: isLast,
+      note: t.note,
+    }
+  })
+
+  if (steps.length === 0) {
+    steps.push(
+      { title: 'Order placed', time: `${formattedDate} ${formattedTime}`, done: true, current: false, note: null },
+      { title: trackingStatusLabels[order.status] || order.status.replace(/_/g, ' '), time: 'Current', done: false, current: true, note: null },
+    )
+  }
 
   return (
     <div>
@@ -102,7 +167,7 @@ export default function OrderDetailPage() {
           <li className="sep">/</li>
           <li><a href="/orders" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Orders</a></li>
           <li className="sep">/</li>
-          <li className="current">{order.id}</li>
+          <li className="current">#{order.id}</li>
         </ol>
         <button
           onClick={() => navigate('/orders')}
@@ -125,7 +190,7 @@ export default function OrderDetailPage() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Order {order.id}</h1>
+              <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Order #{order.id}</h1>
               <span style={{
                 padding: '3px 10px', borderRadius: 999,
                 background: sc.bg, color: sc.fg,
@@ -135,7 +200,7 @@ export default function OrderDetailPage() {
               </span>
             </div>
             <div style={{ fontSize: 13, color: 'rgba(245,240,232,0.7)', marginTop: 4 }}>
-              {order.date} at {order.time}
+              {formattedDate} at {formattedTime}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -143,7 +208,7 @@ export default function OrderDetailPage() {
               Total
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, marginTop: 2 }}>
-              {formatCurrency(total)}
+              {formatCurrency(order.total_tzs)}
             </div>
           </div>
         </div>
@@ -219,13 +284,13 @@ export default function OrderDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {lines.map((line, i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 600, color: '#2C3E50' }}>{line.name}</td>
+                {lines.map((line) => (
+                  <tr key={line.id}>
+                    <td style={{ fontWeight: 600, color: '#2C3E50' }}>{line.item_name}</td>
                     <td style={{ textAlign: 'center', color: '#64748B' }}>{line.qty}</td>
-                    <td style={{ textAlign: 'right', color: '#64748B' }}>{formatCurrency(line.unitPrice)}</td>
+                    <td style={{ textAlign: 'right', color: '#64748B' }}>{formatCurrency(line.unit_price_tzs)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#2C3E50' }}>
-                      {formatCurrency(line.qty * line.unitPrice)}
+                      {formatCurrency(line.total_tzs)}
                     </td>
                   </tr>
                 ))}
@@ -239,11 +304,11 @@ export default function OrderDetailPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: '#64748B' }}>Delivery fee</span>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{formatCurrency(order.deliveryFee)}</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{formatCurrency(order.delivery_fee_tzs)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid #EDE7D9' }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>Total</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(total)}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A5C58' }}>{formatCurrency(order.total_tzs)}</span>
               </div>
             </div>
           </div>
@@ -271,7 +336,7 @@ export default function OrderDetailPage() {
                 { label: 'Name', value: client.name },
                 { label: 'Email', value: client.email, icon: Mail },
                 { label: 'Phone', value: client.phone, icon: Phone },
-                { label: 'Address', value: client.address, icon: MapPin },
+                { label: 'Address', value: order.delivery_address || 'N/A', icon: MapPin },
               ].map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   {f.icon && <f.icon size={13} style={{ color: '#64748B', marginTop: 3, flexShrink: 0 }} />}
@@ -303,14 +368,9 @@ export default function OrderDetailPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: 'Name', value: vendor.name },
-                { label: 'Email', value: vendor.email, icon: Mail },
-                { label: 'Phone', value: vendor.phone, icon: Phone },
-                { label: 'Location', value: vendor.location, icon: MapPin },
-                { label: 'Rating', value: `${vendor.rating} / 5.0` },
+                { label: 'Name', value: shop.name },
               ].map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  {f.icon && <f.icon size={13} style={{ color: '#64748B', marginTop: 3, flexShrink: 0 }} />}
                   <div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       {f.label}
@@ -320,28 +380,10 @@ export default function OrderDetailPage() {
                 </div>
               ))}
             </div>
-            {/* Contact buttons */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <a href={`mailto:${vendor.email}`} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 0', fontSize: 12, fontWeight: 700, color: vendorColor,
-                border: `1px solid ${vendorColor}30`, borderRadius: 8,
-                background: '#FFFFFF', textDecoration: 'none',
-              }}>
-                <Mail size={13} /> Email
-              </a>
-              <a href={`tel:${vendor.phone}`} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 0', fontSize: 12, fontWeight: 700, color: '#FFFFFF',
-                background: vendorColor, borderRadius: 8, textDecoration: 'none',
-              }}>
-                <Phone size={13} /> Call
-              </a>
-            </div>
           </div>
 
-          {/* Driver details (if delivery) */}
-          {order.fulfillment === 'delivery' && (
+          {/* Driver details (if driver exists) */}
+          {driver && (
             <div className="panel" style={{ padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                 <div style={{
@@ -359,8 +401,7 @@ export default function OrderDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   { label: 'Name', value: driver.name },
-                  { label: 'Phone', value: driver.phone, icon: Phone },
-                  { label: 'Rating', value: `${driver.rating} / 5.0` },
+                  ...(driver.phone ? [{ label: 'Phone', value: driver.phone, icon: Phone }] : []),
                 ].map((f) => (
                   <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     {f.icon && <f.icon size={13} style={{ color: '#64748B', marginTop: 3, flexShrink: 0 }} />}
@@ -373,28 +414,28 @@ export default function OrderDetailPage() {
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                <a href={`tel:${driver.phone}`} style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 0', fontSize: 12, fontWeight: 700, color: '#CF6A2C',
-                  border: '1px solid #FDE8D4', borderRadius: 8,
-                  background: '#FFFFFF', textDecoration: 'none',
-                }}>
-                  <Phone size={13} /> Call Driver
-                </a>
-              </div>
+              {driver.phone && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                  <a href={`tel:${driver.phone}`} style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '8px 0', fontSize: 12, fontWeight: 700, color: '#CF6A2C',
+                    border: '1px solid #FDE8D4', borderRadius: 8,
+                    background: '#FFFFFF', textDecoration: 'none',
+                  }}>
+                    <Phone size={13} /> Call Driver
+                  </a>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Payment & Delivery info */}
+          {/* Order Info */}
           <div className="panel" style={{ padding: 20 }}>
             <div className="panel-title" style={{ marginBottom: 14 }}>Order Info</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: 'Payment', value: order.paymentMethod, icon: CreditCard },
-                { label: 'Fulfillment', value: order.fulfillment === 'delivery' ? 'Delivery' : 'Self drop-off', icon: Truck },
-                { label: 'Pickup', value: order.pickupWindow, icon: Clock },
-                { label: 'Address', value: order.pickupAddress, icon: MapPin },
+                { label: 'Payment Status', value: order.payment_status?.replace(/_/g, ' ') || 'N/A', icon: CreditCard },
+                { label: 'Delivery Address', value: order.delivery_address || 'N/A', icon: MapPin },
               ].map((f) => (
                 <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   {f.icon && <f.icon size={13} style={{ color: '#64748B', marginTop: 3, flexShrink: 0 }} />}

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, User, Phone, Mail, MapPin, Calendar,
   Shield, Clock, Star, Package, Edit2, RotateCcw,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { adminApi } from '@/services/api'
 
 interface StaffDetail {
   id: number
@@ -23,57 +24,38 @@ interface StaffDetail {
   recentOrders: { id: string; client: string; date: string; total: number }[]
 }
 
-const mockStaff: Record<number, StaffDetail> = {
-  3: {
-    id: 3,
-    name: 'Daniel Kimani',
-    email: 'daniel@freshfold.com',
-    phone: '+255 744 418 820',
-    branch: 'Mama Ngina Branch',
-    address: '12 Mama Ngina Street, 2nd Floor, Dar es Salaam',
-    role: 'Staff',
-    status: 'Active',
-    joinedDate: '2024-01-12',
-    shift: '07:00 - 19:00',
-    ordersCheckedIn: 142,
-    tenure: '2.1 yrs',
-    rating: 4.8,
-    recentOrders: [
-      { id: '#4523', client: 'Amara Koroma', date: '2026-08-21', total: 45000 },
-      { id: '#4519', client: 'Grace T.', date: '2026-08-21', total: 41000 },
-      { id: '#4515', client: 'Lila M.', date: '2026-08-20', total: 36000 },
-    ],
-  },
-  4: {
-    id: 4,
-    name: 'Kofi Asante',
-    email: 'kofi@freshfold.com',
-    phone: '+255 731 234 567',
-    branch: 'Kariakoo Branch',
-    address: '27 Kariakoo Street, Ilala, Dar es Salaam',
-    role: 'Staff',
-    status: 'Active',
-    joinedDate: '2024-01-11',
-    shift: '08:00 - 20:00',
-    ordersCheckedIn: 98,
-    tenure: '2.2 yrs',
-    rating: 4.6,
-    recentOrders: [
-      { id: '#4522', client: 'Jabari Mensah', date: '2026-08-21', total: 32000 },
-      { id: '#4516', client: 'Kofi A.', date: '2026-08-19', total: 52000 },
-    ],
-  },
-}
-
 const statusColors: Record<string, { bg: string; fg: string }> = {
   Active: { bg: '#DFF5ED', fg: '#1A7A5C' },
   Pending: { bg: '#FDF3E3', fg: '#D4841A' },
   Suspended: { bg: '#F3D5CE', fg: '#C0553F' },
 }
 
+function formatDate(dateStr: string) {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return dateStr
+  }
+}
+
+function formatTenure(dateStr: string) {
+  try {
+    const joined = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - joined.getTime()
+    const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000))
+    return years > 0 ? `${years} yr${years !== 1 ? 's' : ''}` : 'Less than a year'
+  } catch {
+    return '—'
+  }
+}
+
 export default function StaffDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [staff, setStaff] = useState<StaffDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showPinModal, setShowPinModal] = useState(false)
   const [editName, setEditName] = useState('')
@@ -82,24 +64,68 @@ export default function StaffDetailPage() {
   const [newPin, setNewPin] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const staff = mockStaff[Number(id)]
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    setError(null)
+    adminApi
+      .getUser(id)
+      .then((res) => {
+        const u = res.data.data
+        setStaff({
+          id: u.id,
+          name: u.name ?? '',
+          email: u.email ?? '',
+          phone: u.phone ?? '',
+          branch: u.branch ?? '',
+          address: u.address ?? '',
+          role: u.role ?? 'Staff',
+          status: u.status ?? 'Active',
+          joinedDate: u.created_at ?? '',
+          shift: u.shift ?? '08:00 - 20:00',
+          ordersCheckedIn: u.orders_checked_in ?? 0,
+          tenure: formatTenure(u.created_at ?? ''),
+          rating: u.rating ?? 0,
+          recentOrders: u.recent_orders ?? [],
+        })
+      })
+      .catch(() => setError('Failed to load staff details.'))
+      .finally(() => setLoading(false))
+  }, [id])
 
-  const handleSaveEdit = () => {
-    // In a real app, this would call adminApi.updateUser()
-    setShowEditModal(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSaveEdit = async () => {
+    if (!id) return
+    try {
+      await adminApi.updateUser(id, {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+      })
+      setStaff((prev) =>
+        prev ? { ...prev, name: editName, email: editEmail, phone: editPhone } : prev,
+      )
+      setShowEditModal(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      /* handle error */
+    }
   }
 
-  const handleResetPin = () => {
-    // In a real app, this would call adminApi.updateUser()
-    setShowPinModal(false)
-    setNewPin('')
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleResetPin = async () => {
+    if (!id || !newPin) return
+    try {
+      await adminApi.updateUser(id, { pin: newPin })
+      setShowPinModal(false)
+      setNewPin('')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      /* handle error */
+    }
   }
 
-  if (!staff) {
+  if (loading) {
     return (
       <div>
         <div className="title-card">
@@ -112,7 +138,26 @@ export default function StaffDetailPage() {
           </ol>
         </div>
         <div className="panel" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ color: '#64748B', fontSize: 14 }}>Staff member not found.</p>
+          <p style={{ color: '#64748B', fontSize: 14 }}>Loading staff details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !staff) {
+    return (
+      <div>
+        <div className="title-card">
+          <ol className="breadcrumb" style={{ margin: 0, padding: 0 }}>
+            <li><a href="/" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Home</a></li>
+            <li className="sep">/</li>
+            <li><a href="/members" style={{ color: '#64748B', fontWeight: 600, textDecoration: 'none' }}>Members</a></li>
+            <li className="sep">/</li>
+            <li className="current">Staff</li>
+          </ol>
+        </div>
+        <div className="panel" style={{ padding: 40, textAlign: 'center' }}>
+          <p style={{ color: '#64748B', fontSize: 14 }}>{error ?? 'Staff member not found.'}</p>
           <button
             onClick={() => navigate('/members/staff')}
             style={{
@@ -257,7 +302,7 @@ export default function StaffDetailPage() {
               { label: 'Address', value: staff.address, icon: MapPin },
               { label: 'Role', value: staff.role, icon: Shield },
               { label: 'Shift', value: staff.shift, icon: Clock },
-              { label: 'Joined', value: new Date(staff.joinedDate).toLocaleDateString(), icon: Calendar },
+              { label: 'Joined', value: formatDate(staff.joinedDate), icon: Calendar },
             ].map((f) => (
               <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <f.icon size={14} style={{ color: '#64748B', marginTop: 3, flexShrink: 0 }} />
@@ -265,7 +310,7 @@ export default function StaffDetailPage() {
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     {f.label}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#2C3E50', marginTop: 2 }}>{f.value}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#2C3E50', marginTop: 2 }}>{f.value || '—'}</div>
                 </div>
               </div>
             ))}

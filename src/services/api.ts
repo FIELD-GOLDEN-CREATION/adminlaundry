@@ -33,6 +33,9 @@ export const adminApi = {
     const params = role ? { role } : {}
     return api.get('/admin/users', { params })
   },
+  getUser: (id: number | string) => {
+    return api.get(`/admin/users/${id}`)
+  },
   createUser: (data: { name: string; email: string; password: string; role: string; phone?: string }) => {
     return api.post('/admin/users', data)
   },
@@ -61,10 +64,16 @@ export const adminApi = {
   getDashboardOrders: (params?: { status?: string; vendor?: string }) => {
     return api.get('/admin/orders', { params })
   },
+  getOrder: (id: number | string) => {
+    return api.get(`/admin/orders/${id}`)
+  },
 
   // Shops
   getShops: () => {
     return api.get('/admin/shops')
+  },
+  getShop: (id: number | string) => {
+    return api.get(`/admin/shops/${id}`)
   },
   updateShop: (id: number | string, data: Record<string, unknown>) => {
     return api.put(`/admin/shops/${id}`, data)
@@ -106,6 +115,14 @@ export const adminApi = {
   // Reports
   getReports: () => {
     return api.get('/admin/reports')
+  },
+
+  // Categories & Items
+  getCategories: () => {
+    return api.get('/admin/categories')
+  },
+  getItems: () => {
+    return api.get('/admin/items')
   },
 
   // Settings
