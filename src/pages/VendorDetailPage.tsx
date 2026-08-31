@@ -195,7 +195,7 @@ export default function VendorDetailPage() {
         {[
           { label: 'Total Orders', value: (shop.total_orders || 0).toLocaleString(), icon: ShoppingBag, color: '#1A5C58' },
           { label: 'Total Revenue', value: formatCurrency(shop.total_revenue || 0), icon: TrendingUp, color: '#D4841A' },
-          { label: 'Rating', value: `${shop.rating_avg?.toFixed(1) || '0.0'} / 5.0`, icon: Star, color: '#7C3AED' },
+          { label: 'Rating', value: `${Number(shop.rating_avg || 0).toFixed(1)} / 5.0`, icon: Star, color: '#7C3AED' },
         ].map((kpi) => (
           <div key={kpi.label} className="panel" style={{ padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -442,7 +442,7 @@ export default function VendorDetailPage() {
           <div className="panel" style={{ padding: 0, marginBottom: 16 }}>
             <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 40, fontWeight: 800, color: '#2C3E50' }}>{shop.rating_avg?.toFixed(1) || '0.0'}</div>
+                <div style={{ fontSize: 40, fontWeight: 800, color: '#2C3E50' }}>{Number(shop.rating_avg || 0).toFixed(1)}</div>
                 <div style={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: 4 }}>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} size={16} style={{
