@@ -44,11 +44,13 @@ export default function MembersPage() {
     try {
       if (activeTab === 'vendors') {
         const res = await adminApi.getShops()
-        setShops(res.data.data || res.data.shops || [])
+        const d = res.data.data
+        setShops(Array.isArray(d) ? d : (d?.data || []))
       } else {
         const res = await adminApi.getUsers()
-        const data = res.data
-        setAllUsers(data.users || data.data || [])
+        const d = res.data
+        const list = d.users || d.data
+        setAllUsers(Array.isArray(list) ? list : (list?.data || []))
       }
     } catch (err: any) {
       console.error('Failed to load data:', err)
