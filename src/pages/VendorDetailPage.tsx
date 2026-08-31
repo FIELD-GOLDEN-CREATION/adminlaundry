@@ -38,12 +38,18 @@ interface ShopData {
   status: string
   is_open: boolean
   created_at: string
-  recent_orders: { id: string; status: string; total: number; created_at: string; client?: { name: string } }[]
+  recent_orders: { id: string; status: string; total_tzs: string; created_at: string; customer?: { name: string } }[]
   reviews: { id: string; rating: number; comment: string; created_at: string; customer?: { name: string } }[]
   vendor_categories: {
-    id: string
-    name: string
-    items: { id: string; name: string; price: number; unit: string; available: boolean }[]
+    id: number
+    shop_id: number
+    category_id: number
+    name?: string
+    category?: {
+      id: number
+      name: string
+      items: { id: number; name: string; default_price_tzs: string; unit: string; is_available: boolean }[]
+    }
   }[]
 }
 
@@ -51,7 +57,7 @@ export default function VendorDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [expandedCategory, setExpandedCategory] = useState<number | null>(null)
   const [shop, setShop] = useState<ShopData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +75,12 @@ export default function VendorDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (expandedCategory === null && shop?.vendor_categories?.length) {
+      setExpandedCategory(shop.vendor_categories[0].id)
+    }
+  }, [shop, expandedCategory])
 
   if (loading) {
     return (
@@ -101,12 +113,8 @@ export default function VendorDetailPage() {
 
   const vs = vendorStatusColors[shop.status] || vendorStatusColors.pending
   const categories = shop.vendor_categories || []
-  const totalCategoryItems = categories.reduce((sum, c) => sum + c.items.length, 0)
-  const availableItems = categories.reduce((sum, c) => sum + c.items.filter((i) => i.available).length, 0)
-
-  if (expandedCategory === null && categories.length > 0) {
-    setExpandedCategory(categories[0].id)
-  }
+  const totalCategoryItems = categories.reduce((sum, c) => sum + (c.category?.items?.length || 0), 0)
+  const availableItems = categories.reduce((sum, c) => sum + (c.category?.items?.filter((i) => i.is_available !== false).length || 0), 0)
 
   return (
     <div>
@@ -280,13 +288,13 @@ export default function VendorDetailPage() {
                   return (
                     <tr key={order.id}>
                       <td style={{ fontWeight: 700, color: '#2C3E50' }}>#{order.id}</td>
-                      <td style={{ color: '#64748B' }}>{order.client?.name || '—'}</td>
+                      <td style={{ color: '#64748B' }}>{order.customer?.name || '—'}</td>
                       <td>
                         <span className="status-pill" style={{ background: sc.bg, color: sc.fg, fontSize: 10 }}>
                           {order.status?.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(order.total)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(order.total_tzs)}</td>
                     </tr>
                   )
                 })}
@@ -356,7 +364,8 @@ export default function VendorDetailPage() {
 
           {categories.map((cat) => {
             const isExpanded = expandedCategory === cat.id
-            const catAvailable = cat.items.filter((i) => i.available).length
+            const catItems = cat.category?.items || []
+            const catAvailable = catItems.filter((i) => i.is_available !== false).length
             return (
               <div key={cat.id} className="panel" style={{ padding: 0, marginBottom: 12, overflow: 'hidden' }}>
                 <button
@@ -369,16 +378,16 @@ export default function VendorDetailPage() {
                 >
                   {isExpanded ? <ChevronDown size={16} style={{ color: '#64748B' }} /> : <ChevronRight size={16} style={{ color: '#64748B' }} />}
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>{cat.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>{cat.category?.name || cat.name}</div>
                     <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                      {catAvailable}/{cat.items.length} items available
+                      {catAvailable}/{catItems.length} items available
                     </div>
                   </div>
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
                     background: '#E8F2F1', color: '#1A5C58',
                   }}>
-                    {cat.items.length} items
+                    {catItems.length} items
                   </span>
                 </button>
                 {isExpanded && (
@@ -392,15 +401,15 @@ export default function VendorDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {cat.items.map((item) => (
-                        <tr key={item.id} style={{ opacity: item.available ? 1 : 0.5 }}>
+                      {catItems.map((item) => (
+                        <tr key={item.id} style={{ opacity: item.is_available !== false ? 1 : 0.5 }}>
                           <td style={{ fontWeight: 600, color: '#2C3E50' }}>{item.name}</td>
                           <td style={{ textAlign: 'center', color: '#64748B' }}>{item.unit}</td>
                           <td style={{ textAlign: 'right', fontWeight: 700, color: '#2C3E50' }}>
-                            {formatCurrency(item.price)}
+                            {formatCurrency(item.default_price_tzs)}
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            {item.available ? (
+                            {item.is_available !== false ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#1A7A5C' }}>
                                 <Check size={12} /> Active
                               </span>

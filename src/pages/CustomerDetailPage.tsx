@@ -95,15 +95,15 @@ export default function CustomerDetailPage() {
 
         const allOrders = ordersRes.data.data ?? []
         const filtered = allOrders
-          .filter((o: any) => String(o.client?.id) === String(u.id) || String(o.user_id) === String(u.id))
+          .filter((o: any) => String(o.customer?.id) === String(u.id) || String(o.customer_id) === String(u.id) || String(o.user_id) === String(u.id))
           .map((o: any) => ({
             id: `#${o.id}`,
-            vendor: o.vendor_name || o.shop_name || o.vendor || 'Unknown',
-            items: typeof o.items === 'number' ? `${o.items} items` : (o.items_summary || `${o.items ?? 0} items`),
-            total: o.total ?? 0,
+            vendor: o.shop?.name || o.shop_name || 'Unknown',
+            items: typeof o.lines === 'object' ? `${o.lines?.length ?? 0} items` : (o.items_summary || `${o.items ?? 0} items`),
+            total: parseFloat(o.total_tzs ?? o.total ?? 0),
             status: o.status ?? 'pending',
             date: o.created_at?.slice(0, 10) ?? '',
-            payment: o.payment_method || o.payment || 'M-Pesa',
+            payment: o.payment_method || 'M-Pesa',
           }))
         setOrders(filtered)
       })

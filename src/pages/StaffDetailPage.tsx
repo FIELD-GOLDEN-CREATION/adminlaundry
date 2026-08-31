@@ -21,7 +21,7 @@ interface StaffDetail {
   ordersCheckedIn: number
   tenure: string
   rating: number
-  recentOrders: { id: string; client: string; date: string; total: number }[]
+  recentOrders: { id: string | number; client?: string; customer?: { name: string }; date?: string; created_at?: string; total?: number; total_tzs?: string }[]
 }
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
@@ -362,17 +362,17 @@ export default function StaffDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {staff.recentOrders.map((order) => (
+              {staff.recentOrders?.map((order) => (
                 <tr
                   key={order.id}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
+                  onClick={() => navigate(`/orders/${String(order.id).replace('#', '')}`)}
                 >
                   <td style={{ fontWeight: 700, color: '#2C3E50' }}>{order.id}</td>
-                  <td style={{ color: '#64748B' }}>{order.client}</td>
-                  <td style={{ color: '#64748B' }}>{order.date}</td>
+                  <td style={{ color: '#64748B' }}>{order.customer?.name || order.client || '—'}</td>
+                  <td style={{ color: '#64748B' }}>{order.date || order.created_at || '—'}</td>
                   <td style={{ textAlign: 'right', fontWeight: 700, color: '#2C3E50' }}>
-                    {formatCurrency(order.total)}
+                    {formatCurrency(order.total || order.total_tzs)}
                   </td>
                 </tr>
               ))}
