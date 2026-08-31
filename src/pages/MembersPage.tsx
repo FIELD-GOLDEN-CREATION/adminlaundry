@@ -90,17 +90,16 @@ export default function MembersPage() {
       return
     }
     try {
-      const response = await adminApi.createUser({
+      await adminApi.createUser({
         name: newUser.name,
         email: newUser.email,
         password: newUser.password,
         phone: newUser.phone || undefined,
         role: activeTab === 'clients' ? 'customer' : (activeTab === 'vendors' ? 'vendor' : 'staff'),
       })
-      const created = response.data.user || response.data.data
-      setAllUsers((prev) => [created, ...prev])
       setShowCreateModal(false)
       setNewUser({ name: '', email: '', password: '', phone: '' })
+      loadData()
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.response?.data?.errors?.email?.[0] || 'Failed to create user.'
       setError(msg)

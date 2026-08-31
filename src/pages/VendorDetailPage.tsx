@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Star, MapPin, Phone, Mail, ShoppingBag,
   TrendingUp, Tag, Percent, Check, X as XIcon, ChevronDown, ChevronRight, AlertTriangle,
+  Edit, KeyRound,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
@@ -61,6 +62,12 @@ export default function VendorDetailPage() {
   const [shop, setShop] = useState<ShopData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', address: '', description: '' })
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [newPin, setNewPin] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [pinSaving, setPinSaving] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -81,6 +88,52 @@ export default function VendorDetailPage() {
       setExpandedCategory(shop.vendor_categories[0].id)
     }
   }, [shop, expandedCategory])
+
+  const openEditModal = () => {
+    if (!shop) return
+    setEditForm({
+      name: shop.name || '',
+      email: shop.email || '',
+      phone: shop.phone || '',
+      address: shop.address || '',
+      description: shop.description || '',
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!id || !shop) return
+    setEditSaving(true)
+    try {
+      await adminApi.updateShop(id, {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        address: editForm.address,
+        description: editForm.description,
+      })
+      setShop({ ...shop, ...editForm })
+      setShowEditModal(false)
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to save')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const handleSavePin = async () => {
+    if (!id || !newPin || newPin.length < 4) return
+    setPinSaving(true)
+    try {
+      await adminApi.updateUser(id, { password: newPin })
+      setShowPinModal(false)
+      setNewPin('')
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to update PIN')
+    } finally {
+      setPinSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -127,16 +180,38 @@ export default function VendorDetailPage() {
           <li className="sep">/</li>
           <li className="current">{shop.name}</li>
         </ol>
-        <button
-          onClick={() => navigate('/members/vendors')}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
-            fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
-            border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
-          }}
-        >
-          <ArrowLeft size={14} /> Back to Vendors
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={openEditModal}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#1A5C58', background: '#E8F2F1',
+              border: 'none', borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            <Edit size={14} /> Edit
+          </button>
+          <button
+            onClick={() => setShowPinModal(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#D4841A', background: '#FDF3E3',
+              border: 'none', borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            <KeyRound size={14} /> Reset PIN
+          </button>
+          <button
+            onClick={() => navigate('/members/vendors')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+              border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+        </div>
       </div>
 
       {/* Profile header */}
@@ -488,6 +563,76 @@ export default function VendorDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => setShowEditModal(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480,
+            zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Edit Vendor</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'Shop Name', key: 'name' },
+                { label: 'Email', key: 'email' },
+                { label: 'Phone', key: 'phone' },
+                { label: 'Address', key: 'address' },
+                { label: 'Description', key: 'description' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>{field.label}</label>
+                  <input
+                    value={(editForm as any)[field.key]}
+                    onChange={(e) => setEditForm((p) => ({ ...p, [field.key]: e.target.value }))}
+                    style={{
+                      width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
+                      padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button onClick={() => setShowEditModal(false)} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveEdit} disabled={editSaving} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58', border: 'none', borderRadius: 9, cursor: editSaving ? 'wait' : 'pointer', opacity: editSaving ? 0.6 : 1 }}>{editSaving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Reset PIN Modal */}
+      {showPinModal && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => setShowPinModal(false)} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400,
+            zIndex: 51, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Reset PIN / Password</div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>New Password</label>
+              <input
+                type="password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Enter new password (min 6 chars)"
+                style={{
+                  width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
+                  padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+              <button onClick={() => { setShowPinModal(false); setNewPin(''); }} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSavePin} disabled={pinSaving || newPin.length < 6} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#D4841A', border: 'none', borderRadius: 9, cursor: pinSaving ? 'wait' : 'pointer', opacity: pinSaving || newPin.length < 6 ? 0.6 : 1 }}>{pinSaving ? 'Saving...' : 'Update PIN'}</button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
