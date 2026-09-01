@@ -86,6 +86,9 @@ export const adminApi = {
   getPromos: () => {
     return api.get('/admin/promos')
   },
+  getPromo: (id: number | string) => {
+    return api.get(`/admin/promos/${id}`)
+  },
   createPromo: (data: Record<string, unknown>) => {
     return api.post('/admin/promos', data)
   },
@@ -131,5 +134,22 @@ export const adminApi = {
   },
   updateSettings: (settings: { key: string; value: string }[]) => {
     return api.put('/admin/settings', { settings })
+  },
+
+  // Packages
+  getPackages: () => {
+    return api.get('/admin/packages')
+  },
+  getPackage: (id: number | string) => {
+    return api.get(`/admin/packages/${id}`)
+  },
+  updatePackage: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/packages/${id}`, data)
+  },
+  togglePackage: (id: number | string) => {
+    return api.put(`/admin/packages/${id}/toggle`)
+  },
+  deletePackage: (id: number | string) => {
+    return api.delete(`/admin/packages/${id}`)
   },
 }

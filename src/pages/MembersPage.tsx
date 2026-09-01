@@ -251,6 +251,7 @@ export default function MembersPage() {
                 <th>Shop Name</th>
                 <th>Owner</th>
                 <th>Status</th>
+                <th>Open/Closed</th>
                 <th>Orders</th>
                 <th>Balance</th>
                 <th>Created</th>
@@ -293,7 +294,7 @@ export default function MembersPage() {
                 </tr>
               ))}
               {filteredShops.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>No vendors found</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>No vendors found</td></tr>
               )}
             </tbody>
           </table>
