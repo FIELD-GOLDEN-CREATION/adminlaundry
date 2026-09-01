@@ -56,12 +56,12 @@ export default function OrdersPage() {
   const totalRevenue = orders.filter((o) => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total_tzs || 0), 0)
 
   const stats = [
-    { label: 'Total Orders', value: orders.length.toString(), color: '#E8F2F1' },
-    { label: 'Revenue', value: formatCurrency(totalRevenue), color: '#FDF3E3' },
-    { label: 'Pending', value: (statusCounts['pending'] || 0).toString(), color: '#F3D5CE' },
-    { label: 'In Wash', value: ((statusCounts['in_wash'] || 0) + (statusCounts['accepted'] || 0)).toString(), color: '#E3EEFF' },
-    { label: 'Ready', value: (statusCounts['ready'] || 0).toString(), color: '#DFF5ED' },
-    { label: 'Delivered', value: (statusCounts['delivered'] || 0).toString(), color: '#DFF5ED' },
+    { label: 'Total Orders', value: orders.length.toString() },
+    { label: 'Revenue', value: formatCurrency(totalRevenue) },
+    { label: 'Pending', value: (statusCounts['pending'] || 0).toString() },
+    { label: 'In Wash', value: ((statusCounts['in_wash'] || 0) + (statusCounts['accepted'] || 0)).toString() },
+    { label: 'Ready', value: (statusCounts['ready'] || 0).toString() },
+    { label: 'Delivered', value: (statusCounts['delivered'] || 0).toString() },
   ]
 
   return (
@@ -81,11 +81,11 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="stats-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 14 }}>
         {stats.map((s) => (
-          <div key={s.label} className="stat-card" style={{ background: s.color }}>
-            <div className="stat-label">{s.label}</div>
-            <div className="stat-value">{loading ? '...' : s.value}</div>
+          <div key={s.label} className="panel" style={{ padding: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : s.value}</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
