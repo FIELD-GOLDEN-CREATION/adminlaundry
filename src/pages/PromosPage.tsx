@@ -45,7 +45,8 @@ export default function PromosPage() {
     const load = async () => {
       try {
         const res = await adminApi.getPromos()
-        setPromos(res.data.data || [])
+        const raw = res.data?.data ?? res.data
+        setPromos(Array.isArray(raw) ? raw : [])
       } catch (err) {
         console.error('Failed to load promos:', err)
       } finally {
