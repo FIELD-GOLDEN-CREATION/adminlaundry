@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Download, Printer } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
@@ -24,6 +25,7 @@ const statusTabs = [
 ]
 
 export default function OrdersPage() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState('all')
@@ -130,7 +132,7 @@ export default function OrdersPage() {
                 {filteredOrders.map((order) => {
                   const sc = statusColors[order.status] || statusColors.pending
                   return (
-                    <tr key={order.id}>
+                    <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/orders/${order.id}`)}>
                       <td style={{ fontWeight: 700, color: '#2C3E50' }}>#{order.order_number || order.id}</td>
                       <td style={{ color: '#64748B' }}>{order.customer_name || order.customer?.name || '—'}</td>
                       <td style={{ color: '#64748B' }}>{order.shop?.name || '—'}</td>
