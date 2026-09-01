@@ -14,6 +14,7 @@ interface ShopRow {
   id: number
   name: string
   slug: string
+  owner?: { name?: string; email?: string }
   owner_name?: string
   owner_email?: string
   address?: string
@@ -268,7 +269,7 @@ export default function MembersPage() {
                       <span style={{ fontWeight: 600, color: '#2C3E50', fontSize: 13 }}>{shop.name}</span>
                     </div>
                   </td>
-                  <td style={{ color: '#64748B', fontSize: 13 }}>{shop.owner_name || '—'}</td>
+                  <td style={{ color: '#64748B', fontSize: 13 }}>{shop.owner?.name || shop.owner_name || '—'}</td>
                   <td>
                     <span className="status-pill" style={{
                       background: (shop.status === 'active' || shop.is_active) ? '#DFF5ED' : shop.status === 'suspended' ? '#F3D5CE' : '#FDF3E3',
