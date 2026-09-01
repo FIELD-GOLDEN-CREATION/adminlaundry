@@ -18,7 +18,9 @@ interface ShopRow {
   owner_email?: string
   address?: string
   phone?: string
+  status: string
   is_active: boolean
+  is_open: boolean
   total_orders: number
   balance: number
   created_at: string
@@ -248,6 +250,7 @@ export default function MembersPage() {
                 <th>Shop Name</th>
                 <th>Owner</th>
                 <th>Status</th>
+                <th>Open/Closed</th>
                 <th>Orders</th>
                 <th>Balance</th>
                 <th>Created</th>
@@ -268,10 +271,18 @@ export default function MembersPage() {
                   <td style={{ color: '#64748B', fontSize: 13 }}>{shop.owner_name || '—'}</td>
                   <td>
                     <span className="status-pill" style={{
-                      background: shop.is_active ? '#DFF5ED' : '#F3D5CE',
-                      color: shop.is_active ? '#1A7A5C' : '#C0553F',
+                      background: (shop.status === 'active' || shop.is_active) ? '#DFF5ED' : shop.status === 'suspended' ? '#F3D5CE' : '#FDF3E3',
+                      color: (shop.status === 'active' || shop.is_active) ? '#1A7A5C' : shop.status === 'suspended' ? '#C0553F' : '#D4841A',
                     }}>
-                      {shop.is_active ? 'Active' : 'Inactive'}
+                      {shop.status ? shop.status.charAt(0).toUpperCase() + shop.status.slice(1) : shop.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="status-pill" style={{
+                      background: shop.is_open ? '#DFF5ED' : '#F3D5CE',
+                      color: shop.is_open ? '#1A7A5C' : '#C0553F',
+                    }}>
+                      {shop.is_open ? 'Open' : 'Closed'}
                     </span>
                   </td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>{shop.total_orders ?? 0}</td>
@@ -285,7 +296,7 @@ export default function MembersPage() {
                 </tr>
               ))}
               {filteredShops.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>No vendors found</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: '#64748B', fontStyle: 'italic' }}>No vendors found</td></tr>
               )}
             </tbody>
           </table>
