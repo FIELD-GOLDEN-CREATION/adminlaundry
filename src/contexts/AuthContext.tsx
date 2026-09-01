@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import {
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
   type User as FirebaseUser,
 } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { auth, googleProvider } from '@/lib/firebase'
 import { api } from '@/services/api'
 import type { User } from '@/types'
 
@@ -14,6 +15,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null
   token: string | null
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   isLoading: boolean
   isAuthenticated: boolean
@@ -110,6 +112,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }
 
+  const loginWithGoogle = async () => {
+    skipNextAuthChange.current = true
+    setIsLoading(true)
+
+    try {
+      const userCredential = await signInWithPopup(auth, googleProvider)
+      const idToken = await userCredential.user.getIdToken()
+
+      const response = await api.post('/auth/login', { id_token: idToken })
+      const { token: apiToken, user: userData } = response.data
+
+      localStorage.setItem('admin_token', apiToken)
+      setToken(apiToken)
+      setUser(userData)
+      setFirebaseUser(userCredential.user)
+      api.defaults.headers.common['Authorization'] = `Bearer ${apiToken}`
+    } catch (err) {
+      skipNextAuthChange.current = false
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const logout = async () => {
     await signOut(auth)
     localStorage.removeItem('admin_token')
@@ -126,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         token,
         login,
+        loginWithGoogle,
         logout,
         isLoading,
         isAuthenticated: !!user,

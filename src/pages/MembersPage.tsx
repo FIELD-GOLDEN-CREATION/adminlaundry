@@ -14,11 +14,14 @@ interface ShopRow {
   id: number
   name: string
   slug: string
-  owner_name?: string
-  owner_email?: string
+  owner?: { name?: string; email?: string }
   address?: string
   phone?: string
-  is_active: boolean
+  // Backend columns are `status` (active/suspended/pending, admin-controlled)
+  // and `is_open` (the vendor's own day-to-day open/closed toggle) — there
+  // is no `is_active` column, so a flag by that name is always undefined.
+  status: 'active' | 'suspended' | 'pending'
+  is_open: boolean
   total_orders: number
   balance: number
   created_at: string
@@ -73,8 +76,8 @@ export default function MembersPage() {
 
   const filteredShops = shops.filter(
     (s) => (s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.owner_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.owner_email || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      (s.owner?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.owner?.email || '').toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
   const roleCounts = {
@@ -265,14 +268,19 @@ export default function MembersPage() {
                       <span style={{ fontWeight: 600, color: '#2C3E50', fontSize: 13 }}>{shop.name}</span>
                     </div>
                   </td>
-                  <td style={{ color: '#64748B', fontSize: 13 }}>{shop.owner_name || '—'}</td>
+                  <td style={{ color: '#64748B', fontSize: 13 }}>{shop.owner?.name || '—'}</td>
                   <td>
                     <span className="status-pill" style={{
-                      background: shop.is_active ? '#DFF5ED' : '#F3D5CE',
-                      color: shop.is_active ? '#1A7A5C' : '#C0553F',
+                      background: shop.is_open ? '#DFF5ED' : '#F3D5CE',
+                      color: shop.is_open ? '#1A7A5C' : '#C0553F',
                     }}>
-                      {shop.is_active ? 'Active' : 'Inactive'}
+                      {shop.is_open ? 'Open' : 'Closed'}
                     </span>
+                    {shop.status !== 'active' && (
+                      <span className="status-pill" style={{ marginLeft: 6, background: '#FDF3E3', color: '#D4841A', textTransform: 'capitalize' }}>
+                        {shop.status}
+                      </span>
+                    )}
                   </td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>{shop.total_orders ?? 0}</td>
                   <td style={{ color: '#64748B', fontSize: 13 }}>TZS {(shop.balance ?? 0).toLocaleString()}</td>
