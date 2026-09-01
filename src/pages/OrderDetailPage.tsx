@@ -9,16 +9,18 @@ import { adminApi } from '@/services/api'
 
 interface OrderLine {
   id: number
-  item_name: string
+  name: string
   qty: number
   unit_price_tzs: number
   total_tzs: number
 }
 
 interface TrackingStep {
-  status: string
+  step_index: number
+  title: string
+  time_label: string | null
+  completed_at: string | null
   created_at: string
-  note: string | null
 }
 
 interface OrderData {
@@ -30,7 +32,7 @@ interface OrderData {
   total_tzs: number
   delivery_fee_tzs: number
   delivery_address: string | null
-  notes: string | null
+  note: string | null
   created_at: string
   shop: { name: string; [key: string]: unknown }
   customer: { name: string; email: string; phone: string; [key: string]: unknown }
@@ -143,18 +145,17 @@ export default function OrderDetailPage() {
   const steps = tracking.map((t, i) => {
     const isLast = i === tracking.length - 1
     return {
-      title: trackingStatusLabels[t.status] || t.status.replace(/_/g, ' '),
-      time: isLast ? formatTime(t.created_at) : formatTime(t.created_at),
+      title: t.title,
+      time: t.time_label || formatTime(t.completed_at || t.created_at),
       done: !isLast,
       current: isLast,
-      note: t.note,
     }
   })
 
   if (steps.length === 0) {
     steps.push(
-      { title: 'Order placed', time: `${formattedDate} ${formattedTime}`, done: true, current: false, note: null },
-      { title: trackingStatusLabels[order.status] || order.status.replace(/_/g, ' '), time: 'Current', done: false, current: true, note: null },
+      { title: 'Order placed', time: `${formattedDate} ${formattedTime}`, done: true, current: false },
+      { title: trackingStatusLabels[order.status] || order.status.replace(/_/g, ' '), time: 'Current', done: false, current: true },
     )
   }
 
@@ -286,7 +287,7 @@ export default function OrderDetailPage() {
               <tbody>
                 {lines.map((line) => (
                   <tr key={line.id}>
-                    <td style={{ fontWeight: 600, color: '#2C3E50' }}>{line.item_name}</td>
+                    <td style={{ fontWeight: 600, color: '#2C3E50' }}>{line.name}</td>
                     <td style={{ textAlign: 'center', color: '#64748B' }}>{line.qty}</td>
                     <td style={{ textAlign: 'right', color: '#64748B' }}>{formatCurrency(line.unit_price_tzs)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#2C3E50' }}>
@@ -447,13 +448,13 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               ))}
-              {order.notes && (
+              {order.note && (
                 <div style={{
                   padding: '10px 12px', borderRadius: 8,
                   background: '#FFF9EF', border: '1px solid #FDF3E3',
                   fontSize: 12, color: '#64748B', lineHeight: 1.5,
                 }}>
-                  <span style={{ fontWeight: 700, color: '#D4841A' }}>Note:</span> {order.notes}
+                  <span style={{ fontWeight: 700, color: '#D4841A' }}>Note:</span> {order.note}
                 </div>
               )}
             </div>
