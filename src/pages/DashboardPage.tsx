@@ -113,38 +113,68 @@ export default function DashboardPage() {
               <div style={{ textAlign: 'center', padding: 32, color: '#64748B' }}>Loading...</div>
             ) : (
               <>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th>Order</th>
-                      <th>Client</th>
-                      <th>Vendor</th>
-                      <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                {/* Desktop table — scrollable on small screens */}
+                <div className="data-table" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 540 }}>
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Client</th>
+                        <th>Vendor</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentOrders.map((order) => {
+                        const sc = statusColors[order.status] || statusColors.pending
+                        return (
+                          <tr key={order.id}>
+                            <td style={{ fontWeight: 700, color: '#2C3E50' }}>#{order.id}</td>
+                            <td style={{ color: '#64748B' }}>{order.customer_name || order.customer?.name || '—'}</td>
+                            <td style={{ color: '#64748B' }}>{order.shop?.name || '—'}</td>
+                            <td>
+                              <span className="status-pill" style={{ background: sc.bg, color: sc.fg }}>
+                                {order.status?.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(order.total_tzs || 0)}</td>
+                          </tr>
+                        )
+                      })}
+                      {recentOrders.length === 0 && (
+                        <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>No orders yet</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile card list — visible only on small screens */}
+                {recentOrders.length > 0 && (
+                  <div className="mobile-card-list">
                     {recentOrders.map((order) => {
                       const sc = statusColors[order.status] || statusColors.pending
                       return (
-                        <tr key={order.id}>
-                          <td style={{ fontWeight: 700, color: '#2C3E50' }}>#{order.id}</td>
-                          <td style={{ color: '#64748B' }}>{order.customer_name || order.customer?.name || '—'}</td>
-                          <td style={{ color: '#64748B' }}>{order.shop?.name || '—'}</td>
-                          <td>
+                        <div key={order.id} className="mobile-order-card">
+                          <div className="mobile-order-top">
+                            <span className="mobile-order-id">#{order.id}</span>
                             <span className="status-pill" style={{ background: sc.bg, color: sc.fg }}>
                               {order.status?.replace(/_/g, ' ')}
                             </span>
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(order.total_tzs || 0)}</td>
-                        </tr>
+                          </div>
+                          <div className="mobile-order-meta">
+                            <span>{order.customer_name || order.customer?.name || '—'}</span>
+                            <span className="mobile-order-total">{formatCurrency(order.total_tzs || 0)}</span>
+                          </div>
+                          <div className="mobile-order-meta">
+                            <span>{order.shop?.name || '—'}</span>
+                          </div>
+                        </div>
                       )
                     })}
-                    {recentOrders.length === 0 && (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>No orders yet</td></tr>
-                    )}
-                  </tbody>
-                </table>
+                  </div>
+                )}
+
                 <div className="dt-footer">View all orders →</div>
               </>
             )}

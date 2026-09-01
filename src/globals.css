@@ -798,3 +798,152 @@ tbody tr:hover { background: #E8F2F1; }
   text-decoration: none;
 }
 .notif-footer a:hover { color: var(--bg-surface); }
+
+/* ===== Mobile responsiveness (small displays) ===== */
+@media (max-width: 480px) {
+  .content {
+    padding: 14px 14px 32px;
+    gap: 14px;
+  }
+
+  .hero {
+    padding: 18px 16px 20px;
+    border-radius: 20px;
+  }
+  .hero-title {
+    font-size: 20px;
+  }
+  .hero-cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .hero-card {
+    padding: 12px 14px;
+  }
+  .hc-value {
+    font-size: 20px;
+  }
+
+  .topbar {
+    padding: 10px 14px;
+    min-height: 50px;
+  }
+  .live-pill {
+    font-size: 0;
+    padding: 7px;
+    gap: 0;
+  }
+  .live-pill .dot {
+    margin: 0;
+  }
+  .breadcrumb li {
+    font-size: 12px;
+  }
+
+  .row {
+    gap: 14px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+  .panel-title {
+    font-size: 14px;
+  }
+
+  .dt-head {
+    padding: 14px 16px;
+  }
+  .dt-title {
+    font-size: 14px;
+  }
+
+  .data-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table table {
+    min-width: 540px;
+  }
+
+  .alert-card {
+    padding: 11px 12px;
+    flex-wrap: wrap;
+  }
+  .alert-tag {
+    margin-left: 26px;
+    margin-top: -4px;
+  }
+
+  .stat-tile {
+    padding: 11px;
+  }
+  .stat-tile .st-value {
+    font-size: 15px;
+  }
+
+  .title-card {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  /* Mobile card view for tables */
+  .mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .mobile-order-card {
+    background: #FAF7F1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mobile-order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .mobile-order-id {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2C3E50;
+  }
+  .mobile-order-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #64748B;
+  }
+  .mobile-order-total {
+    font-weight: 700;
+    color: #2C3E50;
+  }
+}
+
+/* Desktop: hide mobile card list */
+@media (min-width: 481px) {
+  .mobile-card-list {
+    display: none;
+  }
+}
+
+/* Tablet adjustments (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .content {
+    padding: 18px 20px 36px;
+  }
+  .hero {
+    padding: 22px 22px 24px;
+  }
+  .live-pill {
+    font-size: 0;
+    padding: 7px;
+    gap: 0;
+  }
+}
