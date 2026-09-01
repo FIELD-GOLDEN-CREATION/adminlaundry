@@ -86,6 +86,9 @@ export const adminApi = {
   getPromos: () => {
     return api.get('/admin/promos')
   },
+  getPromo: (id: number | string) => {
+    return api.get(`/admin/promos/${id}`)
+  },
   createPromo: (data: Record<string, unknown>) => {
     return api.post('/admin/promos', data)
   },
