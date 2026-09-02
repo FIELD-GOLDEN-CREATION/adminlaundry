@@ -124,8 +124,26 @@ export const adminApi = {
   getCategories: () => {
     return api.get('/admin/categories')
   },
+  createCategory: (data: Record<string, unknown>) => {
+    return api.post('/admin/categories', data)
+  },
+  updateCategory: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/categories/${id}`, data)
+  },
+  deleteCategory: (id: number | string) => {
+    return api.delete(`/admin/categories/${id}`)
+  },
   getItems: () => {
     return api.get('/admin/items')
+  },
+  createItem: (data: Record<string, unknown>) => {
+    return api.post('/admin/items', data)
+  },
+  updateItem: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/items/${id}`, data)
+  },
+  deleteItem: (id: number | string) => {
+    return api.delete(`/admin/items/${id}`)
   },
 
   // Settings

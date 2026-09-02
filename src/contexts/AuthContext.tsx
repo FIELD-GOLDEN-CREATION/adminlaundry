@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
+  updateLocalUser: (patch: Partial<User>) => void
   isLoading: boolean
   isAuthenticated: boolean
 }
@@ -136,6 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateLocalUser = (patch: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev))
+  }
+
   const logout = async () => {
     await signOut(auth)
     localStorage.removeItem('admin_token')
@@ -154,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         logout,
+        updateLocalUser,
         isLoading,
         isAuthenticated: !!user,
       }}

@@ -115,7 +115,7 @@ export default function StaffDetailPage() {
   const handleResetPin = async () => {
     if (!id || !newPin) return
     try {
-      await adminApi.updateUser(id, { pin: newPin })
+      await adminApi.updateUser(id, { password: newPin })
       setShowPinModal(false)
       setNewPin('')
       setSaved(true)

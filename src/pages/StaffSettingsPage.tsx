@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Camera, Save, Lock, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { adminApi } from '@/services/api'
 
 const notificationSettings = [
   { id: 'order_alerts', label: 'Order Alerts', description: 'Get notified on new and updated orders' },
@@ -19,11 +20,77 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function StaffSettingsPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateLocalUser } = useAuth()
   const [activeTab, setActiveTab] = useState('Profile')
   const [notificationState, setNotificationState] = useState<Record<string, boolean>>({
     order_alerts: true, delayed_pickup: true, desktop_push: false,
   })
+
+  const [editName, setEditName] = useState(user?.name || '')
+  const [editEmail, setEditEmail] = useState(user?.email || '')
+  const [editPhone, setEditPhone] = useState(user?.phone || '')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileSaved, setProfileSaved] = useState(false)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSaved, setPasswordSaved] = useState(false)
+
+  useEffect(() => {
+    setEditName(user?.name || '')
+    setEditEmail(user?.email || '')
+    setEditPhone(user?.phone || '')
+  }, [user])
+
+  const handleSaveProfile = async () => {
+    if (!user) return
+    setSavingProfile(true)
+    setProfileError(null)
+    try {
+      await adminApi.updateUser(user.id, {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+      })
+      updateLocalUser({ name: editName, email: editEmail, phone: editPhone })
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2000)
+    } catch (err: any) {
+      setProfileError(err?.response?.data?.message || 'Failed to save changes.')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!user) return
+    setPasswordError(null)
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All password fields are required.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.')
+      return
+    }
+    setSavingPassword(true)
+    try {
+      await adminApi.updateUser(user.id, { password: newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordSaved(true)
+      setTimeout(() => setPasswordSaved(false), 2000)
+    } catch (err: any) {
+      setPasswordError(err?.response?.data?.message || 'Failed to update password.')
+    } finally {
+      setSavingPassword(false)
+    }
+  }
 
   return (
     <div>
@@ -91,33 +158,44 @@ export default function StaffSettingsPage() {
               <div className="panel-title" style={{ marginBottom: 12 }}>Personal Details</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[
-                  { label: 'Full Name', value: user?.name || 'Staff Member' },
-                  { label: 'Email', value: user?.email || 'staff@freshfold.com' },
-                  { label: 'Phone', value: user?.phone || '+255 700 000 000' },
-                  { label: 'Role', value: 'Staff', disabled: true },
+                  { label: 'Full Name', value: editName, onChange: setEditName },
+                  { label: 'Email', value: editEmail, onChange: setEditEmail },
+                  { label: 'Phone', value: editPhone, onChange: setEditPhone },
+                  { label: 'Role', value: 'Staff', disabled: true, onChange: undefined },
                 ].map((field) => (
                   <div key={field.label}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>
                       {field.label}
                     </label>
                     <input
-                      defaultValue={field.value}
+                      value={field.value}
+                      onChange={field.onChange ? (e) => field.onChange!(e.target.value) : undefined}
                       disabled={field.disabled}
                       style={{
                         width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
                         padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: field.disabled ? '#F5F0E8' : '#FFFFFF',
-                        outline: 'none', cursor: field.disabled ? 'not-allowed' : 'default',
+                        outline: 'none', cursor: field.disabled ? 'not-allowed' : 'default', boxSizing: 'border-box',
                       }}
                     />
                   </div>
                 ))}
               </div>
-              <button style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
-                fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
-                border: 'none', borderRadius: 9, cursor: 'pointer', marginTop: 12,
-              }}>
-                <Save size={14} /> Save Changes
+              {profileError && (
+                <div style={{ marginTop: 12, padding: '8px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: 8, fontSize: 12.5, fontWeight: 600 }}>
+                  {profileError}
+                </div>
+              )}
+              <button
+                onClick={handleSaveProfile}
+                disabled={savingProfile}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+                  fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+                  border: 'none', borderRadius: 9, cursor: savingProfile ? 'wait' : 'pointer', marginTop: 12,
+                  opacity: savingProfile ? 0.7 : 1,
+                }}
+              >
+                <Save size={14} /> {savingProfile ? 'Saving...' : profileSaved ? 'Saved' : 'Save Changes'}
               </button>
             </div>
 
@@ -125,27 +203,43 @@ export default function StaffSettingsPage() {
             <div>
               <div className="panel-title" style={{ marginBottom: 12 }}>Change Password</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 380 }}>
-                {['Current Password', 'New Password', 'Confirm Password'].map((label) => (
-                  <div key={label}>
+                {[
+                  { label: 'Current Password', value: currentPassword, onChange: setCurrentPassword },
+                  { label: 'New Password', value: newPassword, onChange: setNewPassword },
+                  { label: 'Confirm Password', value: confirmPassword, onChange: setConfirmPassword },
+                ].map((field) => (
+                  <div key={field.label}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>
-                      {label}
+                      {field.label}
                     </label>
                     <input
                       type="password"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
                       style={{
                         width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
                         padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF',
-                        outline: 'none',
+                        outline: 'none', boxSizing: 'border-box',
                       }}
                     />
                   </div>
                 ))}
-                <button style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
-                  fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
-                  border: 'none', borderRadius: 9, cursor: 'pointer', alignSelf: 'flex-start',
-                }}>
-                  <Lock size={14} /> Update Password
+                {passwordError && (
+                  <div style={{ padding: '8px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: 8, fontSize: 12.5, fontWeight: 600 }}>
+                    {passwordError}
+                  </div>
+                )}
+                <button
+                  onClick={handleUpdatePassword}
+                  disabled={savingPassword}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+                    fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
+                    border: 'none', borderRadius: 9, cursor: savingPassword ? 'wait' : 'pointer', alignSelf: 'flex-start',
+                    opacity: savingPassword ? 0.7 : 1,
+                  }}
+                >
+                  <Lock size={14} /> {savingPassword ? 'Updating...' : passwordSaved ? 'Updated' : 'Update Password'}
                 </button>
               </div>
             </div>

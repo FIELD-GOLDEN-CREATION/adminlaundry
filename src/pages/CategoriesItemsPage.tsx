@@ -37,6 +37,11 @@ export default function CategoriesItemsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [savingCat, setSavingCat] = useState(false)
+  const [catFormError, setCatFormError] = useState<string | null>(null)
+  const [savingItem, setSavingItem] = useState(false)
+  const [itemFormError, setItemFormError] = useState<string | null>(null)
+
   const fetchCategories = async () => {
     try {
       setLoading(true)
@@ -65,35 +70,86 @@ export default function CategoriesItemsPage() {
 
   const handleAddCategory = async () => {
     if (!catForm.name.trim()) return
-    resetCatForm()
-    setShowAddCat(false)
+    setSavingCat(true)
+    setCatFormError(null)
+    try {
+      const res = await adminApi.createCategory({
+        name: catForm.name,
+        description: catForm.description || null,
+        image_url: catForm.image_url || null,
+      })
+      const created = res.data.data
+      setCategories((prev) => [...prev, { ...created, items: created.items ?? [] }])
+      resetCatForm()
+      setShowAddCat(false)
+    } catch (err: any) {
+      setCatFormError(err?.response?.data?.message || 'Failed to create category.')
+    } finally {
+      setSavingCat(false)
+    }
   }
 
   const handleEditCategory = (catId: string) => {
     const cat = categories.find((c) => c.id === catId)
     if (!cat) return
     setCatForm({ name: cat.name, description: cat.description, image_url: cat.image_url })
+    setCatFormError(null)
     setEditCatId(catId)
   }
 
-  const handleSaveEditCategory = () => {
+  const handleSaveEditCategory = async () => {
     if (!editCatId || !catForm.name.trim()) return
-    setCategories((prev) => prev.map((c) =>
-      c.id === editCatId ? { ...c, name: catForm.name, description: catForm.description, image_url: catForm.image_url } : c
-    ))
-    setEditCatId(null)
-    resetCatForm()
+    setSavingCat(true)
+    setCatFormError(null)
+    try {
+      const res = await adminApi.updateCategory(editCatId, {
+        name: catForm.name,
+        description: catForm.description || null,
+        image_url: catForm.image_url || null,
+      })
+      const updated = res.data.data
+      setCategories((prev) => prev.map((c) => (c.id === editCatId ? { ...c, ...updated } : c)))
+      setEditCatId(null)
+      resetCatForm()
+    } catch (err: any) {
+      setCatFormError(err?.response?.data?.message || 'Failed to save category.')
+    } finally {
+      setSavingCat(false)
+    }
   }
 
-  const handleDeleteCategory = (catId: string) => {
+  const handleDeleteCategory = async (catId: string) => {
     if (!confirm('Delete this category and all its items?')) return
-    setCategories((prev) => prev.filter((c) => c.id !== catId))
+    try {
+      await adminApi.deleteCategory(catId)
+      setCategories((prev) => prev.filter((c) => c.id !== catId))
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to delete category.')
+    }
   }
 
-  const handleAddItem = (catId: string) => {
+  const handleAddItem = async (catId: string) => {
     if (!itemForm.name.trim() || !itemForm.price) return
-    resetItemForm()
-    setShowAddItem(null)
+    setSavingItem(true)
+    setItemFormError(null)
+    try {
+      const res = await adminApi.createItem({
+        category_id: catId,
+        name: itemForm.name,
+        description: itemForm.description || null,
+        image_url: itemForm.image_url || null,
+        default_price_tzs: Number(itemForm.price),
+        unit: itemForm.unit,
+      })
+      const created = res.data.data
+      setCategories((prev) => prev.map((c) => (c.id === catId ? { ...c, items: [...c.items, created] } : c)))
+      resetItemForm()
+      setShowAddItem(null)
+    } catch (err: any) {
+      setItemFormError(err?.response?.data?.message || 'Failed to add item.')
+    } finally {
+      setSavingItem(false)
+    }
   }
 
   const handleEditItem = (catId: string, itemId: string) => {
@@ -101,37 +157,65 @@ export default function CategoriesItemsPage() {
     const item = cat?.items.find((i) => i.id === itemId)
     if (!item) return
     setItemForm({ name: item.name, description: item.description, image_url: item.image_url, price: String(item.default_price_tzs), unit: item.unit })
+    setItemFormError(null)
     setEditItemId({ catId, itemId })
   }
 
-  const handleSaveEditItem = () => {
+  const handleSaveEditItem = async () => {
     if (!editItemId || !itemForm.name.trim()) return
-    setCategories((prev) => prev.map((c) =>
-      c.id === editItemId.catId ? {
-        ...c,
-        items: c.items.map((i) =>
-          i.id === editItemId.itemId ? { ...i, name: itemForm.name, description: itemForm.description, image_url: itemForm.image_url, default_price_tzs: Number(itemForm.price), unit: itemForm.unit } : i
-        ),
-      } : c
-    ))
-    setEditItemId(null)
-    resetItemForm()
+    setSavingItem(true)
+    setItemFormError(null)
+    try {
+      const res = await adminApi.updateItem(editItemId.itemId, {
+        name: itemForm.name,
+        description: itemForm.description || null,
+        image_url: itemForm.image_url || null,
+        default_price_tzs: Number(itemForm.price),
+        unit: itemForm.unit,
+      })
+      const updated = res.data.data
+      setCategories((prev) => prev.map((c) =>
+        c.id === editItemId.catId ? {
+          ...c,
+          items: c.items.map((i) => (i.id === editItemId.itemId ? { ...i, ...updated } : i)),
+        } : c
+      ))
+      setEditItemId(null)
+      resetItemForm()
+    } catch (err: any) {
+      setItemFormError(err?.response?.data?.message || 'Failed to save item.')
+    } finally {
+      setSavingItem(false)
+    }
   }
 
-  const handleDeleteItem = (catId: string, itemId: string) => {
+  const handleDeleteItem = async (catId: string, itemId: string) => {
     if (!confirm('Delete this item?')) return
-    setCategories((prev) => prev.map((c) =>
-      c.id === catId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c
-    ))
+    try {
+      await adminApi.deleteItem(itemId)
+      setCategories((prev) => prev.map((c) =>
+        c.id === catId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c
+      ))
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to delete item.')
+    }
   }
 
-  const toggleItemAvailability = (catId: string, itemId: string) => {
+  const toggleItemAvailability = async (catId: string, itemId: string) => {
+    const cat = categories.find((c) => c.id === catId)
+    const item = cat?.items.find((i) => i.id === itemId)
+    if (!item) return
+    const next = !item.is_available
     setCategories((prev) => prev.map((c) =>
-      c.id === catId ? {
-        ...c,
-        items: c.items.map((i) => i.id === itemId ? { ...i, is_available: !i.is_available } : i),
-      } : c
+      c.id === catId ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, is_available: next } : i)) } : c
     ))
+    try {
+      await adminApi.updateItem(itemId, { is_available: next })
+    } catch {
+      setCategories((prev) => prev.map((c) =>
+        c.id === catId ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, is_available: !next } : i)) } : c
+      ))
+    }
   }
 
   const formatPrice = (price: number) => `TZS ${price.toLocaleString()}`
@@ -186,7 +270,7 @@ export default function CategoriesItemsPage() {
           <li className="current">Categories & Items</li>
         </ol>
         <button
-          onClick={() => { resetCatForm(); setShowAddCat(true) }}
+          onClick={() => { resetCatForm(); setCatFormError(null); setShowAddCat(true) }}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
             fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58',
@@ -222,21 +306,26 @@ export default function CategoriesItemsPage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   {isEditingCat ? (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        value={catForm.name}
-                        onChange={(e) => setCatForm((p) => ({ ...p, name: e.target.value }))}
-                        style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#2C3E50', outline: 'none' }}
-                        placeholder="Category name"
-                      />
-                      <input
-                        value={catForm.description}
-                        onChange={(e) => setCatForm((p) => ({ ...p, description: e.target.value }))}
-                        style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }}
-                        placeholder="Description"
-                      />
-                      <button onClick={handleSaveEditCategory} style={{ padding: '6px 10px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}><Check size={14} /></button>
-                      <button onClick={() => { setEditCatId(null); resetCatForm() }} style={{ padding: '6px 10px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}><X size={14} /></button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          value={catForm.name}
+                          onChange={(e) => setCatForm((p) => ({ ...p, name: e.target.value }))}
+                          style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, fontWeight: 600, color: '#2C3E50', outline: 'none' }}
+                          placeholder="Category name"
+                        />
+                        <input
+                          value={catForm.description}
+                          onChange={(e) => setCatForm((p) => ({ ...p, description: e.target.value }))}
+                          style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }}
+                          placeholder="Description"
+                        />
+                        <button onClick={handleSaveEditCategory} disabled={savingCat} style={{ padding: '6px 10px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingCat ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, opacity: savingCat ? 0.7 : 1 }}><Check size={14} /></button>
+                        <button onClick={() => { setEditCatId(null); resetCatForm(); setCatFormError(null) }} style={{ padding: '6px 10px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}><X size={14} /></button>
+                      </div>
+                      {catFormError && (
+                        <div style={{ marginTop: 6, fontSize: 11.5, color: '#C0553F', fontWeight: 600 }}>{catFormError}</div>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -260,7 +349,7 @@ export default function CategoriesItemsPage() {
                     const isEditingItem = editItemId?.catId === cat.id && editItemId?.itemId === item.id
                     return (
                       <div key={item.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0',
+                        display: 'flex', alignItems: isEditingItem ? 'flex-start' : 'center', gap: 12, padding: '10px 0',
                         borderBottom: '1px solid #F5F0E8',
                       }}>
                         <div style={{
@@ -270,13 +359,18 @@ export default function CategoriesItemsPage() {
                           <img src={item.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                         </div>
                         {isEditingItem ? (
-                          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 100px 100px auto auto', gap: 6, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Name" />
-                            <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description" />
-                            <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL" />
-                            <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Price" />
-                            <button onClick={handleSaveEditItem} style={{ padding: '4px 8px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: 'pointer' }}><Check size={13} /></button>
-                            <button onClick={() => { setEditItemId(null); resetItemForm() }} style={{ padding: '4px 8px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer' }}><X size={13} /></button>
+                          <div style={{ flex: 1 }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 100px auto auto', gap: 6, alignItems: 'center' }}>
+                              <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Name" />
+                              <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description" />
+                              <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL" />
+                              <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Price" />
+                              <button onClick={handleSaveEditItem} disabled={savingItem} style={{ padding: '4px 8px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingItem ? 'wait' : 'pointer', opacity: savingItem ? 0.7 : 1 }}><Check size={13} /></button>
+                              <button onClick={() => { setEditItemId(null); resetItemForm(); setItemFormError(null) }} style={{ padding: '4px 8px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer' }}><X size={13} /></button>
+                            </div>
+                            {itemFormError && (
+                              <div style={{ marginTop: 6, fontSize: 11.5, color: '#C0553F', fontWeight: 600 }}>{itemFormError}</div>
+                            )}
                           </div>
                         ) : (
                           <>
@@ -311,41 +405,45 @@ export default function CategoriesItemsPage() {
                   {/* Add item form */}
                   {showAddItem === cat.id ? (
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
                       background: '#FAF7F1', borderRadius: 8, marginTop: 8, padding: '12px',
                     }} onClick={(e) => e.stopPropagation()}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {itemForm.image_url ? (
-                          <img src={itemForm.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                        ) : (
-                          <Package size={16} style={{ color: '#64748B' }} />
-                        )}
-                      </div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, color: '#2C3E50', outline: 'none' }} placeholder="Item name" />
-                          <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ width: 100, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, color: '#2C3E50', outline: 'none' }} placeholder="Price (TZS)" />
-                          <select value={itemForm.unit} onChange={(e) => setItemForm((p) => ({ ...p, unit: e.target.value }))} style={{ width: 110, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', background: '#FFF', outline: 'none' }}>
-                            <option value="per piece">per piece</option>
-                            <option value="per kg">per kg</option>
-                            <option value="per pair">per pair</option>
-                            <option value="per set">per set</option>
-                            <option value="per order">per order</option>
-                          </select>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {itemForm.image_url ? (
+                            <img src={itemForm.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          ) : (
+                            <Package size={16} style={{ color: '#64748B' }} />
+                          )}
                         </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL (optional)" />
-                          <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description (optional)" />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, color: '#2C3E50', outline: 'none' }} placeholder="Item name" />
+                            <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ width: 100, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 13, color: '#2C3E50', outline: 'none' }} placeholder="Price (TZS)" />
+                            <select value={itemForm.unit} onChange={(e) => setItemForm((p) => ({ ...p, unit: e.target.value }))} style={{ width: 110, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', background: '#FFF', outline: 'none' }}>
+                              <option value="per piece">per piece</option>
+                              <option value="per kg">per kg</option>
+                              <option value="per pair">per pair</option>
+                              <option value="per set">per set</option>
+                              <option value="per order">per order</option>
+                            </select>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL (optional)" />
+                            <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description (optional)" />
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexDirection: 'column' }}>
+                          <button onClick={() => handleAddItem(cat.id)} disabled={savingItem} style={{ padding: '6px 12px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingItem ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, opacity: savingItem ? 0.7 : 1 }}>{savingItem ? 'Adding...' : 'Add'}</button>
+                          <button onClick={() => { setShowAddItem(null); resetItemForm(); setItemFormError(null) }} style={{ padding: '6px 12px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>Cancel</button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4, flexDirection: 'column' }}>
-                        <button onClick={() => handleAddItem(cat.id)} style={{ padding: '6px 12px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>Add</button>
-                        <button onClick={() => { setShowAddItem(null); resetItemForm() }} style={{ padding: '6px 12px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>Cancel</button>
-                      </div>
+                      {itemFormError && (
+                        <div style={{ marginTop: 8, fontSize: 11.5, color: '#C0553F', fontWeight: 600 }}>{itemFormError}</div>
+                      )}
                     </div>
                   ) : (
                     <button
-                      onClick={() => { resetItemForm(); setShowAddItem(cat.id) }}
+                      onClick={() => { resetItemForm(); setItemFormError(null); setShowAddItem(cat.id) }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
                         marginTop: 8, fontSize: 12, fontWeight: 700, color: '#1A5C58',
@@ -366,7 +464,7 @@ export default function CategoriesItemsPage() {
       {/* Add Category modal */}
       {showAddCat && (
         <>
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => setShowAddCat(false)} />
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }} onClick={() => { setShowAddCat(false); setCatFormError(null) }} />
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             background: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
@@ -399,9 +497,14 @@ export default function CategoriesItemsPage() {
                 </div>
               ))}
             </div>
+            {catFormError && (
+              <div style={{ marginTop: 12, padding: '8px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: 8, fontSize: 12.5, fontWeight: 600 }}>
+                {catFormError}
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-              <button onClick={() => setShowAddCat(false)} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleAddCategory} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58', border: 'none', borderRadius: 9, cursor: 'pointer' }}>Create</button>
+              <button onClick={() => { setShowAddCat(false); setCatFormError(null) }} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF', border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleAddCategory} disabled={savingCat} style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 700, color: '#FFFFFF', background: '#1A5C58', border: 'none', borderRadius: 9, cursor: savingCat ? 'wait' : 'pointer', opacity: savingCat ? 0.7 : 1 }}>{savingCat ? 'Creating...' : 'Create'}</button>
             </div>
           </div>
         </>
