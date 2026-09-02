@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronRight, Plus, Pencil, X, Check, Package } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, ChevronRight, Plus, Pencil, X, Check, Package, Upload } from 'lucide-react'
 import { adminApi } from '@/services/api'
 
 interface Item {
@@ -41,6 +41,7 @@ export default function CategoriesItemsPage() {
   const [catFormError, setCatFormError] = useState<string | null>(null)
   const [savingItem, setSavingItem] = useState(false)
   const [itemFormError, setItemFormError] = useState<string | null>(null)
+  const [uploadingField, setUploadingField] = useState<string | null>(null)
 
   const fetchCategories = async () => {
     try {
@@ -67,6 +68,54 @@ export default function CategoriesItemsPage() {
 
   const resetCatForm = () => setCatForm({ name: '', description: '', image_url: '' })
   const resetItemForm = () => setItemForm({ name: '', description: '', image_url: '', price: '', unit: 'per piece' })
+
+  const handleFileUpload = async (file: File, target: 'item' | 'cat', field: string) => {
+    setUploadingField(field)
+    try {
+      const res = await adminApi.uploadImage(file)
+      const url = res.data.url
+      if (target === 'item') {
+        setItemForm((p) => ({ ...p, image_url: url }))
+      } else {
+        setCatForm((p) => ({ ...p, image_url: url }))
+      }
+    } catch {
+      if (target === 'item') setItemFormError('Failed to upload image.')
+      else setCatFormError('Failed to upload image.')
+    } finally {
+      setUploadingField(null)
+    }
+  }
+
+  const ImageUploadButton = ({ label, target, field, currentUrl }: { label: string; target: 'item' | 'cat'; field: string; currentUrl: string }) => {
+    const inputRef = useRef<HTMLInputElement>(null)
+    return (
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>{label}</label>
+        {currentUrl ? (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', background: '#EDE7D9', flexShrink: 0 }}>
+              <img src={currentUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <button onClick={() => { if (target === 'item') setItemForm((p) => ({ ...p, image_url: '' })); else setCatForm((p) => ({ ...p, image_url: '' })); }} type="button" style={{ fontSize: 11, color: '#C0553F', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploadingField === field} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', width: '100%',
+            border: '1px dashed #CBD5E1', borderRadius: 8, background: '#FAF7F1',
+            cursor: uploadingField === field ? 'wait' : 'pointer', fontSize: 12, color: '#64748B',
+          }}>
+            <Upload size={14} /> {uploadingField === field ? 'Uploading...' : `Upload ${label}`}
+          </button>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleFileUpload(file, target, field)
+          e.target.value = ''
+        }} />
+      </div>
+    )
+  }
 
   const handleAddCategory = async () => {
     if (!catForm.name.trim()) return
@@ -323,6 +372,9 @@ export default function CategoriesItemsPage() {
                         <button onClick={handleSaveEditCategory} disabled={savingCat} style={{ padding: '6px 10px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingCat ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, opacity: savingCat ? 0.7 : 1 }}><Check size={14} /></button>
                         <button onClick={() => { setEditCatId(null); resetCatForm(); setCatFormError(null) }} style={{ padding: '6px 10px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}><X size={14} /></button>
                       </div>
+                      <div style={{ marginTop: 6 }}>
+                        <ImageUploadButton label="Image" target="cat" field={`edit-cat-${cat.id}`} currentUrl={catForm.image_url} />
+                      </div>
                       {catFormError && (
                         <div style={{ marginTop: 6, fontSize: 11.5, color: '#C0553F', fontWeight: 600 }}>{catFormError}</div>
                       )}
@@ -363,10 +415,12 @@ export default function CategoriesItemsPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 100px auto auto', gap: 6, alignItems: 'center' }}>
                               <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Name" />
                               <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description" />
-                              <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL" />
                               <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Price" />
                               <button onClick={handleSaveEditItem} disabled={savingItem} style={{ padding: '4px 8px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingItem ? 'wait' : 'pointer', opacity: savingItem ? 0.7 : 1 }}><Check size={13} /></button>
                               <button onClick={() => { setEditItemId(null); resetItemForm(); setItemFormError(null) }} style={{ padding: '4px 8px', borderRadius: 6, background: '#F3D5CE', color: '#C0553F', border: 'none', cursor: 'pointer' }}><X size={13} /></button>
+                            </div>
+                            <div style={{ marginTop: 6 }}>
+                              <ImageUploadButton label="Image" target="item" field={`edit-item-${item.id}`} currentUrl={itemForm.image_url} />
                             </div>
                             {itemFormError && (
                               <div style={{ marginTop: 6, fontSize: 11.5, color: '#C0553F', fontWeight: 600 }}>{itemFormError}</div>
@@ -428,9 +482,9 @@ export default function CategoriesItemsPage() {
                             </select>
                           </div>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Image URL (optional)" />
                             <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ flex: 1, height: 32, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 10px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description (optional)" />
                           </div>
+                          <ImageUploadButton label="Image" target="item" field={`add-item-${cat.id}`} currentUrl={itemForm.image_url} />
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexDirection: 'column' }}>
                           <button onClick={() => handleAddItem(cat.id)} disabled={savingItem} style={{ padding: '6px 12px', borderRadius: 6, background: '#1A5C58', color: '#FFF', border: 'none', cursor: savingItem ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, opacity: savingItem ? 0.7 : 1 }}>{savingItem ? 'Adding...' : 'Add'}</button>
@@ -478,24 +532,15 @@ export default function CategoriesItemsPage() {
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                { label: 'Category Name', key: 'name', placeholder: 'e.g. Standard Everyday Wear' },
-                { label: 'Description', key: 'description', placeholder: 'Brief description' },
-                { label: 'Image URL', key: 'image_url', placeholder: 'https://...' },
-              ].map((f) => (
-                <div key={f.key}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>{f.label}</label>
-                  <input
-                    value={(catForm as any)[f.key]}
-                    onChange={(e) => setCatForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    style={{
-                      width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9',
-                      padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none',
-                    }}
-                  />
-                </div>
-              ))}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Category Name</label>
+                <input value={catForm.name} onChange={(e) => setCatForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Standard Everyday Wear" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Description</label>
+                <input value={catForm.description} onChange={(e) => setCatForm((p) => ({ ...p, description: e.target.value }))} placeholder="Brief description" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none' }} />
+              </div>
+              <ImageUploadButton label="Image" target="cat" field="add-cat" currentUrl={catForm.image_url} />
             </div>
             {catFormError && (
               <div style={{ marginTop: 12, padding: '8px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: 8, fontSize: 12.5, fontWeight: 600 }}>

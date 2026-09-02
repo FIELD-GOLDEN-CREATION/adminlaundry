@@ -170,4 +170,13 @@ export const adminApi = {
   deletePackage: (id: number | string) => {
     return api.delete(`/admin/packages/${id}`)
   },
+
+  // Upload
+  uploadImage: (file: File) => {
+    const formData = new FormData()
+    formData.append('image', file)
+    return api.post('/admin/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 }
