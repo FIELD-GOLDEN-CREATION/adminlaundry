@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Download, Printer } from 'lucide-react'
+import { RefreshCw, Download, Printer, ShoppingCart, Clock, Droplets, CheckCircle, Truck, Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
 
@@ -56,12 +56,12 @@ export default function OrdersPage() {
   const totalRevenue = orders.filter((o) => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total_tzs || 0), 0)
 
   const stats = [
-    { label: 'Total Orders', value: orders.length.toString() },
-    { label: 'Revenue', value: formatCurrency(totalRevenue) },
-    { label: 'Pending', value: (statusCounts['pending'] || 0).toString() },
-    { label: 'In Wash', value: ((statusCounts['in_wash'] || 0) + (statusCounts['accepted'] || 0)).toString() },
-    { label: 'Ready', value: (statusCounts['ready'] || 0).toString() },
-    { label: 'Delivered', value: (statusCounts['delivered'] || 0).toString() },
+    { label: 'Total Orders', value: orders.length, icon: ShoppingCart, color: '#E8F2F1', fg: '#1A5C58' },
+    { label: 'Revenue', value: formatCurrency(totalRevenue), icon: Package, color: '#FDF3E3', fg: '#D4841A' },
+    { label: 'Pending', value: statusCounts['pending'] || 0, icon: Clock, color: '#FDF3E3', fg: '#D4841A' },
+    { label: 'In Wash', value: (statusCounts['in_wash'] || 0) + (statusCounts['accepted'] || 0), icon: Droplets, color: '#E3EEFF', fg: '#1F5ECC' },
+    { label: 'Ready', value: statusCounts['ready'] || 0, icon: CheckCircle, color: '#DFF5ED', fg: '#1A7A5C' },
+    { label: 'Delivered', value: statusCounts['delivered'] || 0, icon: Truck, color: '#DFF5ED', fg: '#1A7A5C' },
   ]
 
   return (
@@ -81,11 +81,12 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 14 }}>
+      <div className="stat-grid">
         {stats.map((s) => (
-          <div key={s.label} className="panel" style={{ padding: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : s.value}</div>
-            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{s.label}</div>
+          <div key={s.label} className="stat-tile" style={{ '--tile-bg': s.color, '--tile-fg': s.fg } as React.CSSProperties}>
+            <div className="st-icon"><s.icon size={16} /></div>
+            <div className="st-value">{loading ? '...' : s.value}</div>
+            <div className="st-label">{s.label}</div>
           </div>
         ))}
       </div>
