@@ -105,14 +105,20 @@ export const adminApi = {
   },
 
   // Notifications
-  getNotifications: () => {
-    return api.get('/admin/notifications')
+  getNotifications: (params?: { type?: string; event?: string; unread?: boolean; page?: number; limit?: number }) => {
+    return api.get('/admin/notifications', { params })
+  },
+  getUnreadCount: () => {
+    return api.get('/admin/notifications/unread-count')
   },
   markNotificationRead: (id: number) => {
     return api.put(`/admin/notifications/${id}/read`)
   },
   markAllNotificationsRead: () => {
     return api.put('/admin/notifications/read-all')
+  },
+  deleteNotification: (id: number | string) => {
+    return api.delete(`/admin/notifications/${id}`)
   },
 
   // Reports
