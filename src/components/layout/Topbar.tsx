@@ -5,7 +5,6 @@ import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeC
 import { adminApi } from '@/services/api'
 import { timeAgo } from '@/lib/utils'
 import { useNavigate, Link } from 'react-router-dom'
-import { adminApi } from '@/services/api'
 
 interface TopbarProps {
   onMenuClick: () => void
@@ -37,8 +36,6 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState<TopbarNotification[]>([])
   const notifRef = useRef<HTMLDivElement>(null)
-  const [preview, setPreview] = useState<PreviewNotif[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
 
   const isStaff = user?.role === 'staff'
 
