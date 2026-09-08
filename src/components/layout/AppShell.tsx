@@ -25,7 +25,8 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const location = useLocation()
   const pathname = location.pathname
   const title = titleMap[pathname]
@@ -36,19 +37,28 @@ export function AppShell({ children }: AppShellProps) {
     || (pathname.startsWith('/members/staff') ? 'Staff' : null)
     || 'Dashboard'
 
+  const handleMenuClick = () => {
+    const isDesktop = window.matchMedia('(min-width: 901px)').matches
+    if (isDesktop) {
+      setDesktopSidebarOpen((v) => !v)
+    } else {
+      setMobileSidebarOpen((v) => !v)
+    }
+  }
+
   return (
     <div className="app">
       {/* Desktop sidebar — sticky, in document flow (matches original HTML) */}
-      <div className="sidebar-desktop">
-        <Sidebar isOpen={true} onClose={() => {}} mode="desktop" />
+      <div className={`sidebar-desktop${desktopSidebarOpen ? '' : ' closed'}`}>
+        <Sidebar isOpen={desktopSidebarOpen} onClose={() => setDesktopSidebarOpen(false)} mode="desktop" />
       </div>
 
       {/* Mobile sidebar overlay */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} mode="mobile" />
+      <Sidebar isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} mode="mobile" />
 
       {/* Main column */}
       <div className="main">
-        <Topbar onMenuClick={() => setSidebarOpen(true)} title={title} />
+        <Topbar onMenuClick={handleMenuClick} title={title} />
         <main className="content">
           {children}
         </main>

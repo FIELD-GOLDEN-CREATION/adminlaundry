@@ -71,7 +71,7 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
         {/* Mobile menu */}
         <button
           onClick={onMenuClick}
-          className="icon-btn lg:hidden"
+          className="icon-btn"
           style={{ width: 38, height: 38 }}
         >
           <Menu size={18} />
