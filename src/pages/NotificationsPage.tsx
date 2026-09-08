@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Bell, CheckCheck, Trash2, Eye, EyeOff } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CheckCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
 import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeContext'
 
@@ -10,6 +10,23 @@ const typeColors: Record<string, { bg: string; fg: string }> = {
   payment: { bg: '#DFF5ED', fg: '#1A7A5C' },
 }
 
+interface AdminNotification {
+  id: number | string
+  type?: string
+  event?: string
+  title?: string
+  body?: string
+  message?: string
+  description?: string
+  created_at?: string
+  is_read?: boolean
+  read_at?: string | null
+  data?: Record<string, unknown>
+}
+
+const isUnread = (n: AdminNotification) => !n.is_read && !n.read_at
+const bodyOf = (n: AdminNotification) => n.body || n.message || n.description || ''
+
 export default function NotificationsPage() {
   const { onNotification } = useRealtime()
   const [notifications, setNotifications] = useState<any[]>([])
@@ -17,19 +34,27 @@ export default function NotificationsPage() {
   const [selectedType, setSelectedType] = useState('all')
   const [search, setSearch] = useState('')
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await adminApi.getNotifications()
-        setNotifications(res.data.data || [])
-      } catch (err) {
-        console.error('Failed to load notifications:', err)
-      } finally {
-        setLoading(false)
-      }
+  const load = useCallback(async () => {
+    try {
+      const res = await adminApi.getNotifications(selectedType === 'all' ? { limit: 100 } : { type: selectedType, limit: 100 })
+      const items = res.data.data ?? []
+      setNotifications(Array.isArray(items) ? items : [])
+    } catch (err) {
+      console.error('Failed to load notifications:', err)
+    } finally {
+      setLoading(false)
     }
+  }, [selectedType])
+
+  useEffect(() => {
+    setLoading(true)
     load()
-  }, [])
+  }, [load])
+
+  useEffect(() => {
+    const t = setInterval(load, 60000)
+    return () => clearInterval(t)
+  }, [load])
 
   useEffect(() => {
     return onNotification((payload: NotificationEventPayload) => {
@@ -43,11 +68,11 @@ export default function NotificationsPage() {
   const filtered = notifications.filter((n) => {
     const type = n.type || 'system'
     if (selectedType !== 'all' && type !== selectedType) return false
-    if (search && !(n.title || '').toLowerCase().includes(search.toLowerCase()) && !(n.message || n.description || '').toLowerCase().includes(search.toLowerCase())) return false
+    if (search && !(n.title || '').toLowerCase().includes(search.toLowerCase()) && !bodyOf(n).toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
-  const unreadCount = notifications.filter((n) => !n.read_at && !n.is_read).length
+  const unreadCount = notifications.filter(isUnread).length
 
   const toggleRead = (id: string) => {
     const target = notifications.find((n) => n.id === id)
@@ -68,7 +93,7 @@ export default function NotificationsPage() {
     adminApi.deleteNotification(Number(id)).catch(() => {})
   }
 
-  const unreadByType = (type: string) => notifications.filter((n) => (n.type || 'system') === type && !n.read_at && !n.is_read).length
+  const unreadByType = (type: string) => notifications.filter((n) => (n.type || 'system') === type && isUnread(n)).length
 
   const typeIcons: Record<string, string> = {
     order: '📦',
@@ -86,22 +111,30 @@ export default function NotificationsPage() {
           <li className="sep">/</li>
           <li className="current">Notifications</li>
         </ol>
-        <button
-          onClick={markAllRead}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
-            fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
-            border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
-          }}
-        >
-          <CheckCheck size={14} /> Mark all read
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search notifications…"
+            style={{ padding: '9px 12px', fontSize: 12.5, border: '1px solid #EDE7D9', borderRadius: 9, minWidth: 220 }}
+          />
+          <button
+            onClick={markAllRead}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px',
+              fontSize: 12.5, fontWeight: 700, color: '#64748B', background: '#FFFFFF',
+              border: '1px solid #EDE7D9', borderRadius: 9, cursor: 'pointer',
+            }}
+          >
+            <CheckCheck size={14} /> Mark all read{unreadCount > 0 ? ` (${unreadCount})` : ''}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
         {[
-          { label: 'Unread', value: unreadCount.toString(), color: '#FDE8D4' },
+          { label: 'Unread (30-day inbox)', value: unreadCount.toString(), color: '#FDE8D4' },
           { label: 'Order Alerts', value: unreadByType('order').toString(), color: '#E3EEFF' },
           { label: 'Vendor Alerts', value: unreadByType('vendor').toString(), color: '#FDE8D4' },
           { label: 'System', value: unreadByType('system').toString(), color: '#F1F5F9' },
@@ -155,19 +188,19 @@ export default function NotificationsPage() {
           <div style={{ textAlign: 'center', padding: 40, color: '#64748B' }}>Loading notifications...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#64748B', fontStyle: 'italic' }}>
-            {notifications.length === 0 ? 'No notifications yet' : 'No notifications match this filter'}
+            {notifications.length === 0 ? 'No notifications yet — kept for 30 days' : 'No notifications match this filter'}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map((n) => {
-              const isUnread = !n.read_at && !n.is_read
+              const unread = isUnread(n)
               const type = n.type || 'system'
               const tc = typeColors[type] || typeColors.system
               return (
                 <div key={n.id} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 20px',
                   borderBottom: '1px solid #F5F0E8',
-                  background: isUnread ? '#FAFBFD' : '#FFFFFF',
+                  background: unread ? '#FAFBFD' : '#FFFFFF',
                 }}>
                   <div style={{
                     width: 38, height: 38, borderRadius: 10, flexShrink: 0,
@@ -178,33 +211,37 @@ export default function NotificationsPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: isUnread ? 700 : 600, color: '#2C3E50' }}>
+                      <span style={{ fontSize: 14, fontWeight: unread ? 700 : 600, color: '#2C3E50' }}>
                         {n.title || 'Notification'}
                       </span>
-                      {isUnread && <span style={{ width: 8, height: 8, borderRadius: 4, background: '#1F5ECC', flexShrink: 0 }} />}
+                      {unread && <span style={{ width: 8, height: 8, borderRadius: 4, background: '#1F5ECC', flexShrink: 0 }} />}
+                      {n.event && (
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#64748B', background: '#F1F5F9', borderRadius: 6, padding: '2px 8px' }}>
+                          {n.event}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 1.4 }}>
-                      {n.message || n.description || ''}
+                      {bodyOf(n)}
                     </div>
                     <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 6 }}>
                       {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
-                      {n.data?.order_number && <span style={{ marginLeft: 8, color: '#1A5C58', fontWeight: 600 }}>#{n.data.order_number}</span>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                     <button
-                      onClick={() => toggleRead(n.id)}
-                      title={isUnread ? 'Mark read' : 'Mark unread'}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: 6, borderRadius: 6 }}
+                      onClick={() => toggleRead(n)}
+                      title={unread ? 'Mark read' : 'Mark unread (local)'}
+                      style={{ background: 'none', border: '1px solid #EDE7D9', cursor: 'pointer', color: '#64748B', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}
                     >
-                      {isUnread ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {unread ? 'Read ✓' : 'Unread'}
                     </button>
                     <button
                       onClick={() => deleteNotification(n.id)}
                       title="Delete"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C0553F', padding: 6, borderRadius: 6 }}
+                      style={{ background: 'none', border: '1px solid #F3D9D2', cursor: 'pointer', color: '#C0553F', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}
                     >
-                      <Trash2 size={14} />
+                      Delete
                     </button>
                   </div>
                 </div>

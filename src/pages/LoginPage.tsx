@@ -53,10 +53,10 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1920&q=80')`,
+          backgroundImage: `url('https://images.unsplash.com/photo-1610305401607-8745a10c75dd?w=1920&q=80')`,
         }}
       >
-        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 bg-black/60"></div>
       </div>
 
       {/* Login Card */}

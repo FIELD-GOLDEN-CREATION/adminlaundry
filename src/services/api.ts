@@ -105,8 +105,11 @@ export const adminApi = {
   },
 
   // Notifications
-  getNotifications: () => {
-    return api.get('/admin/notifications')
+  getNotifications: (params?: { type?: string; event?: string; unread?: boolean; page?: number; limit?: number }) => {
+    return api.get('/admin/notifications', { params })
+  },
+  getUnreadCount: () => {
+    return api.get('/admin/notifications/unread-count')
   },
   markNotificationRead: (id: number) => {
     return api.put(`/admin/notifications/${id}/read`)
@@ -172,5 +175,14 @@ export const adminApi = {
   },
   deletePackage: (id: number | string) => {
     return api.delete(`/admin/packages/${id}`)
+  },
+
+  // Upload
+  uploadImage: (file: File) => {
+    const formData = new FormData()
+    formData.append('image', file)
+    return api.post('/admin/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   },
 }
