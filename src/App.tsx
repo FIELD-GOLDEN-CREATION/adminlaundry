@@ -22,6 +22,7 @@ import PromosPage from '@/pages/PromosPage'
 import PackagesPage from '@/pages/PackagesPage'
 import CategoriesItemsPage from '@/pages/CategoriesItemsPage'
 import RequestsPage from '@/pages/RequestsPage'
+import ReviewsPage from '@/pages/ReviewsPage'
 import NotificationsPage from '@/pages/NotificationsPage'
 import SubscriptionsPage from '@/pages/SubscriptionsPage'
 import StaffSettingsPage from '@/pages/StaffSettingsPage'
@@ -234,6 +235,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RequestsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reviews"
+        element={
+          <ProtectedRoute>
+            <ReviewsPage />
           </ProtectedRoute>
         }
       />
