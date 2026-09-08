@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   ArrowLeft, User, Store, Truck, Phone, Mail, MapPin,
   Clock, CreditCard, Check, Package, Loader2, AlertCircle,
 } from 'lucide-react'
 import { formatCurrency, formatTime } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { useRealtime, type OrderEventPayload } from '@/contexts/RealtimeContext'
 
 interface OrderLine {
   id: number
@@ -75,13 +76,14 @@ const vendorColor = '#1A5C58'
 export default function OrderDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { onOrderEvent } = useRealtime()
   const [orderData, setOrderData] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback((withSpinner: boolean) => {
     if (!id) return
-    setLoading(true)
+    if (withSpinner) setLoading(true)
     setError(null)
     adminApi.getOrder(id)
       .then((res) => {
@@ -91,9 +93,21 @@ export default function OrderDetailPage() {
         setError(err.response?.data?.message || 'Failed to load order')
       })
       .finally(() => {
-        setLoading(false)
+        if (withSpinner) setLoading(false)
       })
   }, [id])
+
+  useEffect(() => {
+    load(true)
+  }, [load])
+
+  // Refetch quietly (no spinner) when this exact order changes elsewhere —
+  // vendor accepts/rejects it, status advances, etc.
+  useEffect(() => {
+    return onOrderEvent((payload: OrderEventPayload) => {
+      if (String(payload.order.id) === String(id)) load(false)
+    })
+  }, [onOrderEvent, id, load])
 
   if (loading) {
     return (

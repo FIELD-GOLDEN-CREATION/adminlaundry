@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeContext'
 
 const typeColors: Record<string, { bg: string; fg: string }> = {
   order: { bg: '#E3EEFF', fg: '#1F5ECC' },
@@ -27,7 +28,8 @@ const isUnread = (n: AdminNotification) => !n.is_read && !n.read_at
 const bodyOf = (n: AdminNotification) => n.body || n.message || n.description || ''
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<AdminNotification[]>([])
+  const { onNotification } = useRealtime()
+  const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedType, setSelectedType] = useState('all')
   const [search, setSearch] = useState('')
@@ -54,6 +56,15 @@ export default function NotificationsPage() {
     return () => clearInterval(t)
   }, [load])
 
+  useEffect(() => {
+    return onNotification((payload: NotificationEventPayload) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === payload.id)) return prev
+        return [payload, ...prev]
+      })
+    })
+  }, [onNotification])
+
   const filtered = notifications.filter((n) => {
     const type = n.type || 'system'
     if (selectedType !== 'all' && type !== selectedType) return false
@@ -63,36 +74,23 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(isUnread).length
 
-  const toggleRead = async (n: AdminNotification) => {
-    const toRead = isUnread(n)
-    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: toRead ? true : false, read_at: toRead ? new Date().toISOString() : null } : x)))
-    try {
-      if (toRead) await adminApi.markNotificationRead(Number(n.id))
-    } catch (err) {
-      console.error('Failed to update notification:', err)
-      load()
+  const toggleRead = (id: string) => {
+    const target = notifications.find((n) => n.id === id)
+    const nowUnread = !(target?.read_at || target?.is_read)
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: nowUnread ? null : new Date().toISOString(), is_read: !nowUnread } : n))
+    if (nowUnread) {
+      adminApi.markNotificationRead(Number(id)).catch(() => {})
     }
   }
 
-  const markAllRead = async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true, read_at: new Date().toISOString() })))
-    try {
-      await adminApi.markAllNotificationsRead()
-    } catch (err) {
-      console.error('Failed to mark all read:', err)
-      load()
-    }
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString(), is_read: true })))
+    adminApi.markAllNotificationsRead().catch(() => {})
   }
 
-  const deleteNotification = async (id: number | string) => {
-    const prev = notifications
-    setNotifications((list) => list.filter((n) => n.id !== id))
-    try {
-      await adminApi.deleteNotification(id)
-    } catch (err) {
-      console.error('Failed to delete notification:', err)
-      setNotifications(prev)
-    }
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    adminApi.deleteNotification(Number(id)).catch(() => {})
   }
 
   const unreadByType = (type: string) => notifications.filter((n) => (n.type || 'system') === type && isUnread(n)).length

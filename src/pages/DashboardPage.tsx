@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Eye, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { useRealtime } from '@/contexts/RealtimeContext'
 import { adminApi } from '@/services/api'
 
 const BAR_GREEN = '#2F4A3C'
@@ -81,6 +82,7 @@ export default function DashboardPage() {
     active_orders: 0,
     completed_orders: 0,
   })
+  const [selected, setSelected] = useState<Set<number | string>>(new Set())
   const [orders, setOrders] = useState<any[]>([])
   const [revenueByDay, setRevenueByDay] = useState<RevenueDay[]>([])
   const [chartRange, setChartRange] = useState<'7' | '14'>('7')
@@ -90,49 +92,55 @@ export default function DashboardPage() {
   const [dateFilter, setDateFilter] = useState('all')
   const [vendorFilter, setVendorFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [selected, setSelected] = useState<Set<number | string>>(new Set())
+  const { onOrderEvent } = useRealtime()
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const [dashRes, ordersRes, reportsRes] = await Promise.all([
-          adminApi.getDashboard(),
-          adminApi.getDashboardOrders(),
-          adminApi.getReports().catch(() => null),
-        ])
-        if (cancelled) return
-        const dash = dashRes.data?.data ?? {}
-        setKpi({
-          total_orders: dash.total_orders ?? 0,
-          total_revenue: Number(dash.total_revenue ?? 0),
-          total_users: dash.total_users ?? 0,
-          total_vendors: dash.total_vendors ?? 0,
-          total_shops: dash.total_shops ?? 0,
-          pending_orders: dash.pending_orders ?? 0,
-          active_orders: dash.active_orders ?? 0,
-          completed_orders: dash.completed_orders ?? 0,
-        })
-        setOrders(ordersRes.data?.data ?? [])
-        const byDay: RevenueDay[] = reportsRes?.data?.data?.revenue_by_day ?? reportsRes?.data?.revenue_by_day ?? []
-        setRevenueByDay(
-          byDay.map((r: any) => ({
-            day: String(r.day),
-            revenue_tzs: Number(r.revenue_tzs ?? r.revenue ?? 0),
-            orders: Number(r.orders ?? r.order_count ?? 0),
-          })),
-        )
-      } catch (err) {
-        console.error('Dashboard load error:', err)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    try {
+      const [dashRes, ordersRes, reportsRes] = await Promise.all([
+        adminApi.getDashboard(),
+        adminApi.getDashboardOrders(),
+        adminApi.getReports().catch(() => null),
+      ])
+      const dash = dashRes.data?.data ?? {}
+      setKpi({
+        total_orders: dash.total_orders ?? 0,
+        total_revenue: Number(dash.total_revenue ?? 0),
+        total_users: dash.total_users ?? 0,
+        total_vendors: dash.total_vendors ?? 0,
+        total_shops: dash.total_shops ?? 0,
+        pending_orders: dash.pending_orders ?? 0,
+        active_orders: dash.active_orders ?? 0,
+        completed_orders: dash.completed_orders ?? 0,
+      })
+      setOrders(ordersRes.data?.data ?? [])
+      const byDay: RevenueDay[] = reportsRes?.data?.data?.revenue_by_day ?? reportsRes?.data?.revenue_by_day ?? []
+      setRevenueByDay(
+        byDay.map((r: any) => ({
+          day: String(r.day),
+          revenue_tzs: Number(r.revenue_tzs ?? r.revenue ?? 0),
+          orders: Number(r.orders ?? r.order_count ?? 0),
+        })),
+      )
+    } catch (err) {
+      console.error('Dashboard load error:', err)
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Order events fire in bursts (e.g. a vendor accepting several orders in a
+  // row) — debounce so one burst triggers one refetch, not one per event.
+  useEffect(() => {
+    return onOrderEvent(() => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(load, 800)
+    })
+  }, [onOrderEvent, load])
 
   // ---- Chart: last N days of real revenue ----
   const chartData = useMemo(() => {

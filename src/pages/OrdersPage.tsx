@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Download, Printer, ShoppingCart, Clock, Droplets, CheckCircle, Truck, Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { useRealtime, type OrderEventPayload } from '@/contexts/RealtimeContext'
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A' },
@@ -26,23 +27,36 @@ const statusTabs = [
 
 export default function OrdersPage() {
   const navigate = useNavigate()
+  const { onOrderEvent } = useRealtime()
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState('all')
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await adminApi.getDashboardOrders()
+      setOrders(res.data.data || [])
+    } catch (err) {
+      console.error('Failed to load orders:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await adminApi.getDashboardOrders()
-        setOrders(res.data.data || [])
-      } catch (err) {
-        console.error('Failed to load orders:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
     load()
-  }, [])
+  }, [load])
+
+  // The socket payload is a thin refetch signal (id/status/shop_name only) —
+  // refetching keeps every field (payment_status, lines, etc.) the REST
+  // response carries, instead of a partial patch drifting out of sync with it.
+  useEffect(() => {
+    return onOrderEvent((_payload: OrderEventPayload) => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(load, 800)
+    })
+  }, [onOrderEvent, load])
 
   const filteredOrders = selectedStatus === 'all'
     ? orders
@@ -74,7 +88,7 @@ export default function OrdersPage() {
           <li className="current">Orders</li>
         </ol>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="icon-btn" title="Refresh"><RefreshCw size={14} /></button>
+          <button className="icon-btn" title="Refresh" onClick={load}><RefreshCw size={14} /></button>
           <button className="icon-btn" title="Export"><Download size={14} /></button>
           <button className="icon-btn" title="Print"><Printer size={14} /></button>
         </div>
