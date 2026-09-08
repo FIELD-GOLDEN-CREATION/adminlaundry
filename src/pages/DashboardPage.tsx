@@ -84,8 +84,34 @@ export default function DashboardPage() {
   })
   const [selected, setSelected] = useState<Set<number | string>>(new Set())
   const [orders, setOrders] = useState<any[]>([])
-  const [revenueByDay, setRevenueByDay] = useState<RevenueDay[]>([])
   const [chartRange, setChartRange] = useState<'7' | '14'>('7')
+
+  // Revenue buckets are derived from the order list itself (same data the
+  // table shows) so the chart works for staff too — /admin/reports is
+  // admin-only (403 for staff). Mirrors the reports logic: sum of total_tzs
+  // per creation day, zero-filled for the last 14 days.
+  const revenueByDay: RevenueDay[] = useMemo(() => {
+    const buckets = new Map<string, { revenue_tzs: number; orders: number }>()
+    for (const o of orders) {
+      if (!o.created_at) continue
+      const d = new Date(o.created_at)
+      if (Number.isNaN(d.getTime())) continue
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const b = buckets.get(key) ?? { revenue_tzs: 0, orders: 0 }
+      b.revenue_tzs += Number(o.total_tzs ?? 0)
+      b.orders += 1
+      buckets.set(key, b)
+    }
+    const days: RevenueDay[] = []
+    const today = new Date()
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const b = buckets.get(key) ?? { revenue_tzs: 0, orders: 0 }
+      days.push({ day: key, revenue_tzs: b.revenue_tzs, orders: b.orders })
+    }
+    return days
+  }, [orders])
 
   // Table controls (mirror the design: search + Today + All Vendors + All Status)
   const [query, setQuery] = useState('')
@@ -97,10 +123,9 @@ export default function DashboardPage() {
 
   const load = useCallback(async () => {
     try {
-      const [dashRes, ordersRes, reportsRes] = await Promise.all([
+      const [dashRes, ordersRes] = await Promise.all([
         adminApi.getDashboard(),
         adminApi.getDashboardOrders(),
-        adminApi.getReports().catch(() => null),
       ])
       const dash = dashRes.data?.data ?? {}
       setKpi({
@@ -114,14 +139,6 @@ export default function DashboardPage() {
         completed_orders: dash.completed_orders ?? 0,
       })
       setOrders(ordersRes.data?.data ?? [])
-      const byDay: RevenueDay[] = reportsRes?.data?.data?.revenue_by_day ?? reportsRes?.data?.revenue_by_day ?? []
-      setRevenueByDay(
-        byDay.map((r: any) => ({
-          day: String(r.day),
-          revenue_tzs: Number(r.revenue_tzs ?? r.revenue ?? 0),
-          orders: Number(r.orders ?? r.order_count ?? 0),
-        })),
-      )
     } catch (err) {
       console.error('Dashboard load error:', err)
     } finally {
