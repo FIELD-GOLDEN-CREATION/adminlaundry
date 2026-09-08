@@ -5,6 +5,7 @@ import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeC
 import { adminApi } from '@/services/api'
 import { timeAgo } from '@/lib/utils'
 import { useNavigate, Link } from 'react-router-dom'
+import { adminApi } from '@/services/api'
 
 interface TopbarProps {
   onMenuClick: () => void
@@ -36,6 +37,8 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState<TopbarNotification[]>([])
   const notifRef = useRef<HTMLDivElement>(null)
+  const [preview, setPreview] = useState<PreviewNotif[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const isStaff = user?.role === 'staff'
 
@@ -100,14 +103,14 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="icon-badge">{unreadCount}</span>
+              <span className="icon-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </button>
 
           {notifOpen && (
             <div className="notif-dropdown">
               <div className="notif-head">
-                <span className="notif-title">Notifications</span>
+                <span className="notif-title">Notifications {unreadCount > 0 && `(${unreadCount} unread)`}</span>
               </div>
               <div className="notif-list">
                 {notifications.length === 0 && (

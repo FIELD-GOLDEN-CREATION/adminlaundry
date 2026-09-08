@@ -24,15 +24,17 @@ const vendorStatusColors: Record<string, { bg: string; fg: string }> = {
 }
 
 interface ShopData {
-  id: string
+  id: number
+  owner_id: number
+  owner?: { name?: string; email?: string }
   name: string
   slug: string
-  description: string
-  phone: string
-  email: string
-  address: string
-  owner: { name: string; email: string }
-  rating_avg: number
+  description?: string
+  phone?: string
+  email?: string
+  address?: string
+  image_url?: string
+  rating_avg: string | number
   rating_count: number
   total_orders: number
   total_revenue: number
@@ -122,10 +124,10 @@ export default function VendorDetailPage() {
   }
 
   const handleSavePin = async () => {
-    if (!id || !newPin || newPin.length < 4) return
+    if (!shop?.owner_id || !newPin || newPin.length < 4) return
     setPinSaving(true)
     try {
-      await adminApi.updateUser(id, { password: newPin })
+      await adminApi.updateUser(shop.owner_id, { password: newPin })
       setShowPinModal(false)
       setNewPin('')
     } catch (err: any) {
@@ -521,8 +523,8 @@ export default function VendorDetailPage() {
                 <div style={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: 4 }}>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} size={16} style={{
-                      color: i < Math.round(shop.rating_avg || 0) ? '#D4841A' : '#E2E8F0',
-                      fill: i < Math.round(shop.rating_avg || 0) ? '#D4841A' : 'transparent',
+                      color: i < Math.round(Number(shop.rating_avg) || 0) ? '#D4841A' : '#E2E8F0',
+                      fill: i < Math.round(Number(shop.rating_avg) || 0) ? '#D4841A' : 'transparent',
                     }} />
                   ))}
                 </div>
