@@ -114,6 +114,9 @@ export const adminApi = {
   markAllNotificationsRead: () => {
     return api.put('/admin/notifications/read-all')
   },
+  deleteNotification: (id: number) => {
+    return api.delete(`/admin/notifications/${id}`)
+  },
 
   // Reports
   getReports: () => {

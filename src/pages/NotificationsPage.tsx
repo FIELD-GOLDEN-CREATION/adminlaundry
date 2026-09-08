@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, CheckCheck, Trash2, Eye, EyeOff } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeContext'
 
 const typeColors: Record<string, { bg: string; fg: string }> = {
   order: { bg: '#E3EEFF', fg: '#1F5ECC' },
@@ -10,6 +11,7 @@ const typeColors: Record<string, { bg: string; fg: string }> = {
 }
 
 export default function NotificationsPage() {
+  const { onNotification } = useRealtime()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedType, setSelectedType] = useState('all')
@@ -29,6 +31,15 @@ export default function NotificationsPage() {
     load()
   }, [])
 
+  useEffect(() => {
+    return onNotification((payload: NotificationEventPayload) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === payload.id)) return prev
+        return [payload, ...prev]
+      })
+    })
+  }, [onNotification])
+
   const filtered = notifications.filter((n) => {
     const type = n.type || 'system'
     if (selectedType !== 'all' && type !== selectedType) return false
@@ -39,15 +50,22 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.read_at && !n.is_read).length
 
   const toggleRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: n.read_at ? null : new Date().toISOString() } : n))
+    const target = notifications.find((n) => n.id === id)
+    const nowUnread = !(target?.read_at || target?.is_read)
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: nowUnread ? null : new Date().toISOString(), is_read: !nowUnread } : n))
+    if (nowUnread) {
+      adminApi.markNotificationRead(Number(id)).catch(() => {})
+    }
   }
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })))
+    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString(), is_read: true })))
+    adminApi.markAllNotificationsRead().catch(() => {})
   }
 
   const deleteNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
+    adminApi.deleteNotification(Number(id)).catch(() => {})
   }
 
   const unreadByType = (type: string) => notifications.filter((n) => (n.type || 'system') === type && !n.read_at && !n.is_read).length

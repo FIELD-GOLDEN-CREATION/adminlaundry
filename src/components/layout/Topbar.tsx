@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Menu, Bell, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeContext'
+import { adminApi } from '@/services/api'
+import { timeAgo } from '@/lib/utils'
 import { useNavigate, Link } from 'react-router-dom'
 
 interface TopbarProps {
@@ -8,17 +11,30 @@ interface TopbarProps {
   title?: string
 }
 
-const notifications = [
-  { id: '1', title: 'New order assigned', desc: 'Order #4523 → Marina Fresh', time: '2m ago', unread: true },
-  { id: '2', title: 'Pickup overdue', desc: 'Driver Daniel is 15 mins late', time: '8m ago', unread: true },
-  { id: '3', title: 'Vendor cancelled', desc: 'Marina Fresh declined #4518', time: '12m ago', unread: true },
-  { id: '4', title: 'Payout completed', desc: 'TZS 1.2M sent to Bright & Fold', time: '1h ago', unread: false },
-]
+interface TopbarNotification {
+  id: string | number
+  title: string
+  desc: string
+  time: string
+  unread: boolean
+}
+
+function mapNotification(n: any): TopbarNotification {
+  return {
+    id: n.id,
+    title: n.title || 'Notification',
+    desc: n.body || n.message || n.description || '',
+    time: n.created_at ? timeAgo(n.created_at) : '',
+    unread: !n.is_read && !n.read_at,
+  }
+}
 
 export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
   const { user, logout } = useAuth()
+  const { onNotification } = useRealtime()
   const navigate = useNavigate()
   const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<TopbarNotification[]>([])
   const notifRef = useRef<HTMLDivElement>(null)
 
   const isStaff = user?.role === 'staff'
@@ -30,6 +46,22 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  useEffect(() => {
+    adminApi
+      .getNotifications()
+      .then((res) => {
+        const data = res.data?.data || []
+        setNotifications(data.slice(0, 5).map(mapNotification))
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    return onNotification((payload: NotificationEventPayload) => {
+      setNotifications((prev) => [mapNotification(payload), ...prev].slice(0, 5))
+    })
+  }, [onNotification])
 
   const unreadCount = notifications.filter((n) => n.unread).length
 
@@ -78,6 +110,11 @@ export function Topbar({ onMenuClick, title = 'Dashboard' }: TopbarProps) {
                 <span className="notif-title">Notifications</span>
               </div>
               <div className="notif-list">
+                {notifications.length === 0 && (
+                  <div style={{ padding: '20px 16px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
+                    No notifications yet
+                  </div>
+                )}
                 {notifications.map((n) => (
                   <div key={n.id} className={`notif-item ${n.unread ? 'unread' : ''}`}>
                     <div className={`notif-dot ${n.unread ? 'unread' : ''}`} />
