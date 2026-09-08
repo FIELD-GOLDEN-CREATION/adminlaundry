@@ -117,7 +117,7 @@ export const adminApi = {
   markAllNotificationsRead: () => {
     return api.put('/admin/notifications/read-all')
   },
-  deleteNotification: (id: number | string) => {
+  deleteNotification: (id: number) => {
     return api.delete(`/admin/notifications/${id}`)
   },
 

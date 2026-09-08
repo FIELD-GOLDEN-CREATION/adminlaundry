@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 
 import { adminApi } from '../services/api'
+import { useRealtime, type NotificationEventPayload } from './RealtimeContext'
 
 export interface VendorApplication {
   id: string
@@ -107,26 +108,38 @@ function mapApiApplication(a: ApiApplication): VendorApplication {
 export function VendorApplicationProvider({ children }: { children: ReactNode }) {
   const [applications, setApplications] = useState<VendorApplication[]>(initialApplications)
   const [isLoadingApplications, setIsLoadingApplications] = useState(true)
+  const { onNotification } = useRealtime()
+
+  const refetch = useCallback(() => {
+    return adminApi
+      .getApplications()
+      .then((res) => {
+        const data = res.data?.data
+        if (Array.isArray(data)) setApplications(data.map(mapApiApplication))
+      })
+      .catch(() => {})
+  }, [])
 
   // Load live applications from the backend; fall back to the demo seed if
   // the API is unreachable so the panel stays usable offline.
   useEffect(() => {
     let cancelled = false
-    adminApi
-      .getApplications()
-      .then((res) => {
-        if (cancelled) return
-        const data = res.data?.data
-        if (Array.isArray(data)) setApplications(data.map(mapApiApplication))
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setIsLoadingApplications(false)
-      })
+    refetch().finally(() => {
+      if (!cancelled) setIsLoadingApplications(false)
+    })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refetch])
+
+  // `Notify::staffAndAdmins()` fans a 'vendor' notification out to every
+  // admin/staff on submit/plan-change events — a cheap signal to re-pull
+  // the applications list rather than tracking a dedicated event.
+  useEffect(() => {
+    return onNotification((payload: NotificationEventPayload) => {
+      if (payload.type === 'vendor' && payload.data?.application_id) refetch()
+    })
+  }, [onNotification, refetch])
 
   const addApplication = (app: Omit<VendorApplication, 'id' | 'status' | 'submittedAt'>) => {
     const newApp: VendorApplication = {

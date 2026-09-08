@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtime, type PromoEventPayload } from '@/contexts/RealtimeContext'
 import { adminApi } from '@/services/api'
 
 interface PromoData {
@@ -46,6 +47,7 @@ const audienceLabels: Record<string, string> = {
 
 export default function PromosPage() {
   const { user } = useAuth()
+  const { onPromoEvent } = useRealtime()
   const isStaff = user?.role === 'staff'
   const [promos, setPromos] = useState<PromoData[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,6 +88,16 @@ export default function PromosPage() {
   }, [])
 
   useEffect(() => { loadPromos() }, [loadPromos])
+
+  // Redemption counts change whenever a customer applies a code elsewhere —
+  // patch just that field in place rather than refetching the whole list.
+  useEffect(() => {
+    return onPromoEvent((payload: PromoEventPayload) => {
+      setPromos((prev) => prev.map((p) => p.id === payload.promo.id
+        ? { ...p, current_redemptions: payload.promo.current_redemptions, is_active: payload.promo.is_active }
+        : p))
+    })
+  }, [onPromoEvent])
 
   const loadPromoDetail = async (promo: PromoData) => {
     setSelectedPromo(promo)

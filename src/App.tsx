@@ -27,6 +27,7 @@ import SubscriptionsPage from '@/pages/SubscriptionsPage'
 import StaffSettingsPage from '@/pages/StaffSettingsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { VendorApplicationProvider } from '@/contexts/VendorApplicationContext'
+import { RealtimeProvider } from '@/contexts/RealtimeContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -72,6 +73,7 @@ function StaffRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <RealtimeProvider>
     <VendorApplicationProvider>
       <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -262,5 +264,6 @@ export default function App() {
       <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </VendorApplicationProvider>
+    </RealtimeProvider>
   )
 }

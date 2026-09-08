@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtime } from '@/contexts/RealtimeContext'
 import { adminApi } from '@/services/api'
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
@@ -31,25 +32,37 @@ export default function DashboardPage() {
   })
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { onOrderEvent } = useRealtime()
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const [dashRes, ordersRes] = await Promise.all([
+        adminApi.getDashboard(),
+        adminApi.getDashboardOrders(),
+      ])
+      const dash = dashRes.data.data
+      setKpi(dash)
+      setRecentOrders((ordersRes.data.data || []).slice(0, 5))
+    } catch (err) {
+      console.error('Dashboard load error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [dashRes, ordersRes] = await Promise.all([
-          adminApi.getDashboard(),
-          adminApi.getDashboardOrders(),
-        ])
-        const dash = dashRes.data.data
-        setKpi(dash)
-        setRecentOrders((ordersRes.data.data || []).slice(0, 5))
-      } catch (err) {
-        console.error('Dashboard load error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
     load()
-  }, [])
+  }, [load])
+
+  // Order events fire in bursts (e.g. a vendor accepting several orders in a
+  // row) — debounce so one burst triggers one refetch, not one per event.
+  useEffect(() => {
+    return onOrderEvent(() => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(load, 800)
+    })
+  }, [onOrderEvent, load])
 
   const kpiCards = [
     { label: 'Total Orders', value: kpi.total_orders.toString(), sub: `${kpi.active_orders} active` },
