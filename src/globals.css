@@ -48,15 +48,26 @@ body {
 
 .app { display: flex; min-height: 100vh; width: 100%; }
 
-/* Desktop sidebar: sticky, in flow, 264px */
+/* Desktop sidebar: sticky, in flow, 264px, collapsible */
 .sidebar-desktop {
   display: none;
+  overflow: hidden;
+  transition: width 0.3s ease;
 }
 @media (min-width: 901px) {
   .sidebar-desktop {
     display: block;
     width: 264px;
     flex-shrink: 0;
+  }
+  .sidebar-desktop.closed {
+    width: 0;
+  }
+
+  /* Mobile drawer must stay out of the way once the in-flow desktop sidebar takes over */
+  .sidebar-mobile-backdrop,
+  .sidebar-mobile-panel {
+    display: none !important;
   }
 }
 
@@ -569,14 +580,20 @@ tbody tr:hover { background: #E8F2F1; }
    the wrapper stretching with page height, which breaks on long pages in
    some browsers — fixed positioning keeps the nav visible while content
    scrolls. The .sidebar-desktop wrapper stays in flow as a 264px spacer
-   so the main column keeps its offset. */
+   so the main column keeps its offset. The :not(.closed) guard + the
+   display:none below keep the teammate's hamburger collapse working:
+   a fixed element escapes the wrapper's width:0/overflow:hidden, so it
+   must be hidden explicitly when collapsed. */
 @media (min-width: 901px) {
-  .sidebar-desktop .sidebar {
+  .sidebar-desktop:not(.closed) .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
     height: 100dvh;
+  }
+  .sidebar-desktop.closed .sidebar {
+    display: none;
   }
 }
 
