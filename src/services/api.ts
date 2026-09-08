@@ -82,6 +82,11 @@ export const adminApi = {
     return api.delete(`/admin/shops/${id}`)
   },
 
+  // Reviews
+  getReviews: () => {
+    return api.get('/admin/reviews')
+  },
+
   // Promos
   getPromos: () => {
     return api.get('/admin/promos')

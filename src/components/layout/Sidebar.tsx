@@ -17,6 +17,7 @@ import {
   Percent,
   Bell,
   CreditCard,
+  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -34,6 +35,7 @@ const allNavItems = [
   { path: '/packages', label: 'Packages', icon: Package, roles: ['admin', 'staff'] },
   { path: '/categories', label: 'Categories & Items', icon: Package, roles: ['admin', 'staff'] },
   { path: '/requests', label: 'Requests', icon: FileText, roles: ['admin', 'staff'] },
+  { path: '/reviews', label: 'Reviews', icon: Star, roles: ['admin', 'staff'] },
   { path: '/members/vendors', label: 'Vendors', icon: Store, roles: ['staff'] },
   { path: '/members/clients', label: 'Clients', icon: UserCheck, roles: ['staff'] },
   {
