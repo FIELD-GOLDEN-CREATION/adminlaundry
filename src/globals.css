@@ -565,6 +565,21 @@ tbody tr:hover { background: #E8F2F1; }
   z-index: 40;
 }
 
+/* Pin the desktop sidebar to the viewport. `position: sticky` depends on
+   the wrapper stretching with page height, which breaks on long pages in
+   some browsers — fixed positioning keeps the nav visible while content
+   scrolls. The .sidebar-desktop wrapper stays in flow as a 264px spacer
+   so the main column keeps its offset. */
+@media (min-width: 901px) {
+  .sidebar-desktop .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
 .sidebar-brand {
   display: flex;
   align-items: center;
