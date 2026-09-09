@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface RevenueDay {
   day: string
@@ -117,26 +118,14 @@ export default function RevenueReportPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {[
-          { label: 'Total Revenue', value: formatCurrency(totalRevenue), change: '+12.5%', up: true },
-          { label: 'Total Orders', value: String(totalOrders), change: '+8.2%', up: true },
+      <StatTiles
+        items={[
+          { label: 'Total Revenue', value: formatCurrency(totalRevenue), delta: '+12.5%', deltaUp: true },
+          { label: 'Total Orders', value: String(totalOrders), delta: '+8.2%', deltaUp: true },
           { label: 'Avg Order Value', value: formatCurrency(avgOrderValue) },
           { label: 'Top Shops', value: String(topShops.length) },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>{kpi.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{kpi.value}</span>
-              {kpi.change && (
-                <span style={{ fontSize: 11, fontWeight: 800, color: kpi.up ? '#1A7A5C' : '#C0553F', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                  {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {kpi.change}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* Revenue chart */}
       <div className="chart-card">
@@ -164,7 +153,7 @@ export default function RevenueReportPage() {
       </div>
 
       {/* Payment methods & top shops row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {/* Payment methods */}
         <div className="panel" style={{ padding: 20 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>Payment Methods (Estimated)</div>

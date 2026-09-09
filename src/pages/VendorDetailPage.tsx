@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 const statusColors: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A' },
@@ -268,33 +269,13 @@ export default function VendorDetailPage() {
       </div>
 
       {/* KPI tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14 }}>
-        {[
+      <StatTiles
+        items={[
           { label: 'Total Orders', value: (shop.total_orders || 0).toLocaleString(), icon: ShoppingBag, color: '#1A5C58' },
           { label: 'Total Revenue', value: formatCurrency(shop.total_revenue || 0), icon: TrendingUp, color: '#D4841A' },
           { label: 'Rating', value: `${Number(shop.rating_avg || 0).toFixed(1)} / 5.0`, icon: Star, color: '#7C3AED' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: kpi.color + '14', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: kpi.color,
-              }}>
-                <kpi.icon size={18} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {kpi.label}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#2C3E50', marginTop: 2 }}>
-                  {kpi.value}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* Tabs */}
       <div style={{
@@ -319,7 +300,7 @@ export default function VendorDetailPage() {
 
       {/* ===== Overview Tab ===== */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {/* Registration details */}
           <div className="panel" style={{ padding: 20 }}>
             <div className="panel-title" style={{ marginBottom: 16 }}>Registration Details</div>
@@ -388,7 +369,7 @@ export default function VendorDetailPage() {
               <div className="panel-title">Recent Reviews</div>
               <div className="panel-sub">{shop.rating_count || 0} total reviews</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(shop.reviews?.length || 0, 3)}, 1fr)`, gap: 0 }}>
+            <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(shop.reviews?.length || 0, 3)}, 1fr)`, gap: 0 }}>
               {(shop.reviews || []).slice(0, 3).map((review) => (
                 <div key={review.id} style={{ padding: 16, borderRight: '1px solid #F5F0E8' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>

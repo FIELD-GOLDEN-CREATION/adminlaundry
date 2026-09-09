@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CreditCard, Save, RotateCcw } from 'lucide-react'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface PlanLimit {
   key: string
@@ -125,7 +126,7 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Plans grid */}
-      <div style={{
+      <div className="stack-sm" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
         gap: 18,
@@ -298,21 +299,19 @@ export default function SubscriptionsPage() {
             <div className="panel-sub">Vendors per plan</div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {plans.map((plan) => {
+        <StatTiles
+          items={plans.map((plan) => {
             const vendorCount = plan.id === 'basic' ? 12 : plan.id === 'pro' ? 24 : 6
-            return (
-              <div key={plan.id} style={{
-                padding: '14px 16px', borderRadius: 14,
-                background: `${plan.color}08`, border: `1px solid ${plan.color}20`,
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{plan.name}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: plan.color, marginTop: 4 }}>{vendorCount}</div>
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>active vendors</div>
-              </div>
-            )
+            return {
+              label: plan.name,
+              value: vendorCount,
+              sub: 'active vendors',
+              color: plan.color,
+              bg: `${plan.color}08`,
+              accentValue: true,
+            }
           })}
-        </div>
+        />
       </div>
     </div>
   )

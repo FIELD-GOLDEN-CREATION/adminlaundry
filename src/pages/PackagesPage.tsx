@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Package, Search, X, Loader2, AlertCircle, Trash2, ToggleLeft, ToggleRight, Eye, Tag, ShoppingBag, Check, Info } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface PackageItem {
   id: number
@@ -177,26 +178,16 @@ export default function PackagesPage() {
                 <h1 className="hero-title">All Packages</h1>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12, marginTop: 16 }}>
-              <div className="hero-card">
-                <div className="hc-label">Total Packages</div>
-                <div className="hc-row"><span className="hc-value">{totalPackages}</span></div>
-              </div>
-              <div className="hero-card">
-                <div className="hc-label">Active</div>
-                <div className="hc-row">
-                  <span className="hc-value">{activePackages}</span>
-                  <span className="hc-delta pos">{totalPackages ? Math.round((activePackages / totalPackages) * 100) : 0}%</span>
-                </div>
-              </div>
-              <div className="hero-card">
-                <div className="hc-label">Total Orders</div>
-                <div className="hc-row"><span className="hc-value">{totalOrders}</span></div>
-              </div>
-              <div className="hero-card">
-                <div className="hc-label">Avg Price</div>
-                <div className="hc-row"><span className="hc-value">{formatCurrency(avgPrice)}</span></div>
-              </div>
+            <div style={{ marginTop: 16 }}>
+              <StatTiles
+                variant="dark"
+                items={[
+                  { label: 'Total Packages', value: totalPackages },
+                  { label: 'Active', value: activePackages, delta: `${totalPackages ? Math.round((activePackages / totalPackages) * 100) : 0}%`, deltaUp: true },
+                  { label: 'Total Orders', value: totalOrders },
+                  { label: 'Avg Price', value: formatCurrency(avgPrice) },
+                ]}
+              />
             </div>
           </div>
 
@@ -269,7 +260,7 @@ export default function PackagesPage() {
           </div>
 
           {/* Package cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14 }}>
+          <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14 }}>
             {filtered.map((pkg) => {
               const isActive = !!pkg.is_active
               const kc = kindColors[pkg.kind] ?? { bg: '#F1F5F9', text: '#64748B' }
@@ -632,23 +623,15 @@ export default function PackagesPage() {
               )}
 
               {/* Stats grid */}
-              <div style={{
-                padding: 16, borderRadius: 14,
-                background: '#FAF7F1', border: '1px solid #EDE7D9',
-                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16,
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{selectedPkg.order_count}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Total Orders</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{selectedPkg.items?.length ?? 0}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Items</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{selectedPkg.inclusions?.length ?? 0}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Inclusions</div>
-                </div>
+              <div style={{ marginBottom: 20 }}>
+                <StatTiles
+                  center
+                  items={[
+                    { label: 'Total Orders', value: selectedPkg.order_count, color: '#2C3E50', accentValue: true },
+                    { label: 'Items', value: selectedPkg.items?.length ?? 0, color: '#2C3E50', accentValue: true },
+                    { label: 'Inclusions', value: selectedPkg.inclusions?.length ?? 0, color: '#2C3E50', accentValue: true },
+                  ]}
+                />
               </div>
 
               {/* Action buttons */}

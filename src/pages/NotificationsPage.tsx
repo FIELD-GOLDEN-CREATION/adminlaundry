@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 import { useRealtime, type NotificationEventPayload } from '@/contexts/RealtimeContext'
 
 const typeColors: Record<string, { bg: string; fg: string }> = {
@@ -132,19 +133,15 @@ export default function NotificationsPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-        {[
-          { label: 'Unread (30-day inbox)', value: unreadCount.toString(), color: '#FDE8D4' },
-          { label: 'Order Alerts', value: unreadByType('order').toString(), color: '#E3EEFF' },
-          { label: 'Vendor Alerts', value: unreadByType('vendor').toString(), color: '#FDE8D4' },
-          { label: 'System', value: unreadByType('system').toString(), color: '#F1F5F9' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : kpi.value}</div>
-            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{kpi.label}</div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        center
+        items={[
+          { label: 'Unread (30-day inbox)', value: loading ? '...' : unreadCount.toString(), color: '#1A5C58', accentValue: true },
+          { label: 'Order Alerts', value: loading ? '...' : unreadByType('order').toString(), color: '#1A5C58', accentValue: true },
+          { label: 'Vendor Alerts', value: loading ? '...' : unreadByType('vendor').toString(), color: '#1A5C58', accentValue: true },
+          { label: 'System', value: loading ? '...' : unreadByType('system').toString(), color: '#1A5C58', accentValue: true },
+        ]}
+      />
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, TrendingUp, TrendingDown, Star } from 'lucide-react'
+import { Download, Star } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface ShopEntry {
   shop_name?: string
@@ -98,22 +99,18 @@ export default function VendorPerformanceReportPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {[
-          { label: 'Total Vendors', value: String(vendorPerformance.length) },
-          { label: 'Avg Rating', value: avgRating, suffix: '★' },
-          { label: 'Total Orders', value: vendorPerformance.reduce((s, v) => s + v.orders, 0).toLocaleString() },
-          { label: 'Total Revenue', value: formatCurrency(vendorPerformance.reduce((s, v) => s + v.revenue, 0)) },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 18, textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#1A5C58' }}>{kpi.value}{kpi.suffix || ''}</div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginTop: 4 }}>{kpi.label}</div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        center
+        items={[
+          { label: 'Total Vendors', value: String(vendorPerformance.length), color: '#1A5C58', accentValue: true },
+          { label: 'Avg Rating', value: avgRating, suffix: '?', color: '#1A5C58', accentValue: true },
+          { label: 'Total Orders', value: vendorPerformance.reduce((s, v) => s + v.orders, 0).toLocaleString(), color: '#1A5C58', accentValue: true },
+          { label: 'Total Revenue', value: formatCurrency(vendorPerformance.reduce((s, v) => s + v.revenue, 0)), color: '#1A5C58', accentValue: true },
+        ]}
+      />
 
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <div className="chart-card">
           <div className="chart-card-head">
             <div className="chart-card-title">Orders by Vendor</div>

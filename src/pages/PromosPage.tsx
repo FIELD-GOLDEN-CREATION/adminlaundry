@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRealtime, type PromoEventPayload } from '@/contexts/RealtimeContext'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface PromoData {
   id: number
@@ -236,19 +237,15 @@ export default function PromosPage() {
       {!loading && !error && (
         <>
           {/* KPI tiles */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-            {[
-              { label: 'Total Promos', value: promos.length.toString() },
-              { label: 'Active', value: activeCount.toString() },
-              { label: 'Total Redemptions', value: totalRedemptions.toLocaleString() },
-              { label: 'Vendors with Promos', value: vendors.length.toString() },
-            ].map((kpi) => (
-              <div key={kpi.label} className="panel" style={{ padding: 16, textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: '#1A5C58' }}>{kpi.value}</div>
-                <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{kpi.label}</div>
-              </div>
-            ))}
-          </div>
+          <StatTiles
+            center
+            items={[
+              { label: 'Total Promos', value: promos.length.toString(), color: '#1A5C58', accentValue: true },
+              { label: 'Active', value: activeCount.toString(), color: '#1A5C58', accentValue: true },
+              { label: 'Total Redemptions', value: totalRedemptions.toLocaleString(), color: '#1A5C58', accentValue: true },
+              { label: 'Vendors with Promos', value: vendors.length.toString(), color: '#1A5C58', accentValue: true },
+            ]}
+          />
 
           {/* Search + filters */}
           <div style={{
@@ -473,24 +470,15 @@ export default function PromosPage() {
                   </div>
 
                   {/* Stats grid */}
-                  <div style={{
-                    padding: 16, borderRadius: 14, background: '#FAF7F1', border: '1px solid #EDE7D9',
-                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20,
-                  }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: '#1A5C58' }}>{selectedPromo.current_redemptions ?? 0}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Redeemed</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{selectedPromo.max_redemptions ?? '∞'}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Max Allowed</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>
-                        {selectedPromo.expires_at ? new Date(selectedPromo.expires_at).toLocaleDateString() : '∞'}
-                      </div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Expires</div>
-                    </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <StatTiles
+                      center
+                      items={[
+                        { label: 'Redeemed', value: selectedPromo.current_redemptions ?? 0, color: '#1A5C58', accentValue: true },
+                        { label: 'Max Allowed', value: selectedPromo.max_redemptions ?? '∞' },
+                        { label: 'Expires', value: selectedPromo.expires_at ? new Date(selectedPromo.expires_at).toLocaleDateString() : '∞' },
+                      ]}
+                    />
                   </div>
 
                   {/* Redemptions list */}
@@ -585,7 +573,7 @@ export default function PromosPage() {
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Title</label>
                 <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. 20% Off First Order" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Code</label>
                   <input value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} placeholder="e.g. SAVE20" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, fontFamily: 'ui-monospace, monospace', color: '#1A5C58', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
@@ -604,7 +592,7 @@ export default function PromosPage() {
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Description</label>
                 <textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} rows={2} style={{ width: '100%', borderRadius: 9, border: '1px solid #EDE7D9', padding: '8px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Audience</label>
                   <select value={newAudience} onChange={(e) => setNewAudience(e.target.value)} style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }}>
@@ -618,7 +606,7 @@ export default function PromosPage() {
                   <input value={newMinSpend} onChange={(e) => setNewMinSpend(e.target.value)} placeholder="0" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 4, display: 'block' }}>Max Redemptions</label>
                   <input value={newMaxRedemptions} onChange={(e) => setNewMaxRedemptions(e.target.value)} placeholder="100" style={{ width: '100%', height: 38, borderRadius: 9, border: '1px solid #EDE7D9', padding: '4px 12px', fontSize: 13, color: '#2C3E50', background: '#FFFFFF', outline: 'none', boxSizing: 'border-box' }} />

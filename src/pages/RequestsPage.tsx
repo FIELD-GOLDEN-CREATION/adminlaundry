@@ -5,6 +5,7 @@ import {
   User, MessageCircle, Filter, CreditCard,
 } from 'lucide-react'
 import { useVendorApplications } from '@/contexts/VendorApplicationContext'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 const statusConfig: Record<string, { bg: string; fg: string; label: string }> = {
   pending: { bg: '#FDF3E3', fg: '#D4841A', label: 'Pending Review' },
@@ -44,19 +45,14 @@ export default function RequestsPage() {
       </div>
 
       {/* Stats */}
-      <div className="stat-grid">
-        {[
-          { label: 'Total Applications', value: String(counts.all), color: '#E8F2F1' },
-          { label: 'Pending Review', value: String(counts.pending), color: '#FDF3E3' },
-          { label: 'Approved', value: String(counts.approved), color: '#DFF5ED' },
-          { label: 'Rejected', value: String(counts.rejected), color: '#F3D5CE' },
-        ].map((stat) => (
-          <div key={stat.label} className="stat-tile" style={{ '--tile-bg': stat.color } as React.CSSProperties}>
-            <div className="st-value">{stat.value}</div>
-            <div className="st-label">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        items={[
+          { label: 'Total Applications', value: String(counts.all), bg: '#E8F2F1' },
+          { label: 'Pending Review', value: String(counts.pending), bg: '#FDF3E3' },
+          { label: 'Approved', value: String(counts.approved), bg: '#DFF5ED' },
+          { label: 'Rejected', value: String(counts.rejected), bg: '#F3D5CE' },
+        ]}
+      />
 
       {/* Filter tabs */}
       <div style={{

@@ -230,7 +230,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Main content: 2 columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Order Tracking */}

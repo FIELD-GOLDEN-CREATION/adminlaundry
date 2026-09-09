@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Download, Printer } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface ShopEntry {
   shop_name?: string
@@ -160,16 +161,13 @@ export default function VendorLoadReportPage() {
       </div>
 
       {/* Summary tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
-        <div className="panel" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: '#1A5C58' }}>{totalOrders}</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginTop: 4 }}>Total Orders Today</div>
-        </div>
-        <div className="panel" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: '#D4841A' }}>{totalQueue}</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginTop: 4 }}>Total Queue</div>
-        </div>
-      </div>
+      <StatTiles
+        center
+        items={[
+          { label: 'Total Orders Today', value: totalOrders, color: '#1A5C58', accentValue: true },
+          { label: 'Total Queue', value: totalQueue, color: '#D4841A', accentValue: true },
+        ]}
+      />
 
       {/* Table */}
       <div className="data-table-card">

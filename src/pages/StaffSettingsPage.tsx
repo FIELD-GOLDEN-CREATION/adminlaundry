@@ -156,7 +156,7 @@ export default function StaffSettingsPage() {
             {/* Personal Details */}
             <div>
               <div className="panel-title" style={{ marginBottom: 12 }}>Personal Details</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[
                   { label: 'Full Name', value: editName, onChange: setEditName },
                   { label: 'Email', value: editEmail, onChange: setEditEmail },

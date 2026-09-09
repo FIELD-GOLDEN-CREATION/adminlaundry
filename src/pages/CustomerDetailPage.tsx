@@ -7,6 +7,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { useVendorApplications } from '@/contexts/VendorApplicationContext'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 import type { CustomerDetail, FavoriteVendor } from '@/types'
 
 interface OrderRow {
@@ -252,34 +253,14 @@ export default function CustomerDetailPage() {
       </div>
 
       {/* KPI tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-        {[
+      <StatTiles
+        items={[
           { label: 'Total Orders', value: customer.totalOrders.toString(), icon: ShoppingBag, color: '#1A5C58' },
           { label: 'Total Spent', value: `TZS ${customer.totalSpent.toLocaleString()}`, icon: TrendingUp, color: '#D4841A' },
           { label: 'Favorite Vendors', value: customer.favoriteVendorIds.length.toString(), icon: Heart, color: '#C0553F' },
           { label: 'Avg Order Value', value: `TZS ${avgOrderValue.toLocaleString()}`, icon: CreditCard, color: '#1F5ECC' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: kpi.color + '14', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: kpi.color,
-              }}>
-                <kpi.icon size={18} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {kpi.label}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#2C3E50', marginTop: 2 }}>
-                  {kpi.value}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* Tabs */}
       <div style={{
@@ -305,7 +286,7 @@ export default function CustomerDetailPage() {
 
       {/* ===== Overview Tab ===== */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {/* Registration details */}
           <div className="panel" style={{ padding: 20 }}>
             <div className="panel-title" style={{ marginBottom: 16 }}>Registration Details</div>
@@ -483,7 +464,7 @@ export default function CustomerDetailPage() {
 
       {/* ===== Favorite Vendors Tab ===== */}
       {activeTab === 'favorites' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 14 }}>
+        <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 14 }}>
           {favVendors.map((vendor) => {
             const vc = vendorColors[vendor.name] || '#1A5C58'
             return (
@@ -512,20 +493,14 @@ export default function CustomerDetailPage() {
 
                 {/* Vendor stats */}
                 <div style={{ padding: '16px 20px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: vc }}>{vendor.ordersCount}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Orders</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50' }}>TZS {vendor.totalSpent.toLocaleString()}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Total Spent</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#64748B' }}>{vendor.lastOrderDate}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginTop: 2 }}>Last Order</div>
-                    </div>
-                  </div>
+                  <StatTiles
+                    center
+                    items={[
+                      { label: 'Orders', value: vendor.ordersCount, color: vc, accentValue: true },
+                      { label: 'Total Spent', value: `TZS ${vendor.totalSpent.toLocaleString()}` },
+                      { label: 'Last Order', value: vendor.lastOrderDate },
+                    ]}
+                  />
                 </div>
               </div>
             )

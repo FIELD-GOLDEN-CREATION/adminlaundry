@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface Subscription {
   id: number
@@ -148,29 +149,17 @@ export default function SubscriptionsReportPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {[
-          { label: 'Monthly Recurring Revenue', value: formatCurrency(totalMRR), change: '+5.1%', up: true },
-          { label: 'Active Subscriptions', value: String(activeSubscriptions.length), change: '+2', up: true },
+      <StatTiles
+        items={[
+          { label: 'Monthly Recurring Revenue', value: formatCurrency(totalMRR), delta: '+5.1%', deltaUp: true },
+          { label: 'Active Subscriptions', value: String(activeSubscriptions.length), delta: '+2', deltaUp: true },
           { label: 'Avg Revenue / Vendor', value: formatCurrency(avgRevenuePerVendor) },
-          { label: 'Churn Rate', value: `${churnRate}%`, change: '-0.3%', up: true },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>{kpi.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{kpi.value}</span>
-              {kpi.change && (
-                <span style={{ fontSize: 11, fontWeight: 800, color: kpi.up ? '#1A7A5C' : '#C0553F', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                  {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {kpi.change}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+          { label: 'Churn Rate', value: `${churnRate}%`, delta: '-0.3%', deltaUp: true },
+        ]}
+      />
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
         <div className="chart-card">
           <div className="chart-card-head">
             <div className="chart-card-title">Monthly Recurring Revenue</div>

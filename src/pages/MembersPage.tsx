@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Plus, Trash2, Store, RefreshCw, Users, UserCheck } from 'lucide-react'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 import type { User, UserRole } from '@/types'
 
 const roleTabs = [
@@ -202,24 +203,16 @@ export default function MembersPage() {
       </div>
 
       {/* Summary */}
-      <div style={{ display: 'flex', gap: 14, marginTop: 14 }}>
-        {isVendors ? (
-          <div className="panel" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Store size={18} style={{ color: '#1A5C58' }} />
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : filteredShops.length}</div>
-              <div style={{ fontSize: 12, color: '#64748B' }}>Active Shops</div>
-            </div>
-          </div>
-        ) : (
-          <div className="panel" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {activeTab === 'staff' ? <UserCheck size={18} style={{ color: '#1A5C58' }} /> : <Users size={18} style={{ color: '#1A5C58' }} />}
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#1A5C58' }}>{loading ? '...' : filteredUsers.length}</div>
-              <div style={{ fontSize: 12, color: '#64748B' }}>{activeTab === 'staff' ? 'Staff Members' : 'Registered Clients'}</div>
-            </div>
-          </div>
-        )}
+      <div style={{ marginTop: 14 }}>
+        <StatTiles
+          items={[
+            isVendors
+              ? { label: 'Active Shops', value: loading ? '...' : filteredShops.length, icon: Store, color: '#1A5C58' }
+              : activeTab === 'staff'
+                ? { label: 'Staff Members', value: loading ? '...' : filteredUsers.length, icon: UserCheck, color: '#1A5C58' }
+                : { label: 'Registered Clients', value: loading ? '...' : filteredUsers.length, icon: Users, color: '#1A5C58' },
+          ]}
+        />
       </div>
 
       {/* Search */}

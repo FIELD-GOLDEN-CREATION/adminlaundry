@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface User {
   id: number
@@ -131,29 +132,17 @@ export default function CustomerReportPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {[
-          { label: 'Total Customers', value: String(totalCustomers), change: '+14.5%', up: true },
-          { label: 'Total Orders', value: String(totalOrders), change: '+18%', up: true },
+      <StatTiles
+        items={[
+          { label: 'Total Customers', value: String(totalCustomers), delta: '+14.5%', deltaUp: true },
+          { label: 'Total Orders', value: String(totalOrders), delta: '+18%', deltaUp: true },
           { label: 'Avg Orders / Customer', value: avgOrderPerCustomer },
           { label: 'Avg Lifetime Value', value: formatCurrency(avgLifetimeValue) },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>{kpi.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: '#2C3E50' }}>{kpi.value}</span>
-              {kpi.change && (
-                <span style={{ fontSize: 11, fontWeight: 800, color: kpi.up ? '#1A7A5C' : '#C0553F', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                  {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {kpi.change}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
         <div className="chart-card">
           <div className="chart-card-head">
             <div className="chart-card-title">Customer Growth</div>

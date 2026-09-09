@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp, TrendingDown, Minus, ArrowRight, BarChart3, ShoppingCart, CreditCard, Repeat, Users, Truck } from 'lucide-react'
+import { ArrowRight, BarChart3, ShoppingCart, CreditCard, Repeat, Users, Truck } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 const quickLinks = [
   { label: 'Orders Report', description: 'Order trends, status breakdown, cancellation analysis', icon: ShoppingCart, path: '/reports/orders', color: '#E3EEFF', fg: '#1F5ECC' },
@@ -106,31 +107,19 @@ export default function ReportsPage() {
       </div>
 
       {/* Overview metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-        {overviewMetrics.map((metric) => (
-          <div key={metric.label} className="panel" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>{metric.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 24, fontWeight: 700, color: '#2C3E50' }}>{metric.value}</span>
-              {metric.trend === 'up' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 800, color: '#1A7A5C' }}>
-                  <TrendingUp size={11} /> +{metric.change}%
-                </span>
-              )}
-              {metric.trend === 'down' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 800, color: '#C0553F' }}>
-                  <TrendingDown size={11} /> -{metric.change}%
-                </span>
-              )}
-              {metric.trend === 'neutral' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 800, color: '#64748B' }}>
-                  <Minus size={11} /> --
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        items={overviewMetrics.map((metric) => ({
+          label: metric.label,
+          value: metric.value,
+          delta:
+            metric.trend === 'up'
+              ? `+${metric.change}%`
+              : metric.trend === 'down'
+                ? `-${metric.change}%`
+                : '--',
+          deltaUp: metric.trend === 'neutral' ? undefined : metric.trend === 'up',
+        }))}
+      />
 
       {/* Revenue chart */}
       <div className="chart-card">
@@ -182,7 +171,7 @@ export default function ReportsPage() {
             View All <ArrowRight size={13} />
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
           {quickLinks.map((link) => (
             <div
               key={link.label}

@@ -149,7 +149,7 @@ export default function SettingsPage() {
             {/* Personal Details */}
             <div>
               <div className="panel-title" style={{ marginBottom: 12 }}>Personal Details</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[
                   { label: 'Full Name', value: user?.name || '' },
                   { label: 'Email', value: user?.email || '' },

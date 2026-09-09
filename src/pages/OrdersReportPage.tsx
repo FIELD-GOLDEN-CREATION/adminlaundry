@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Download, Printer, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download, Printer } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
+import { StatTiles } from '@/components/ui/StatTiles'
 
 interface RevenueDay {
   day: string
@@ -135,29 +136,17 @@ export default function OrdersReportPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        {[
-          { label: 'Total Orders', value: totalOrders.toLocaleString(), color: '#E8F2F1' },
-          { label: 'Delivered', value: deliveredCount.toLocaleString(), color: '#DFF5ED', change: '+8.3%', up: true },
-          { label: 'Cancelled', value: (ordersByStatus['cancelled'] ?? 0).toLocaleString(), color: '#F3D5CE', change: '+4.2%', up: false },
-          { label: 'Success Rate', value: `${successRate}%`, color: '#E3EEFF' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="panel" style={{ padding: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B' }}>{kpi.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-              <span style={{ fontSize: 24, fontWeight: 700, color: '#2C3E50' }}>{kpi.value}</span>
-              {kpi.change && (
-                <span style={{ fontSize: 11, fontWeight: 800, color: kpi.up ? '#1A7A5C' : '#C0553F', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                  {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {kpi.change}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        items={[
+          { label: 'Total Orders', value: totalOrders.toLocaleString() },
+          { label: 'Delivered', value: deliveredCount.toLocaleString(), delta: '+8.3%', deltaUp: true },
+          { label: 'Cancelled', value: (ordersByStatus['cancelled'] ?? 0).toLocaleString(), delta: '+4.2%', deltaUp: false },
+          { label: 'Success Rate', value: `${successRate}%` },
+        ]}
+      />
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
         <div className="chart-card">
           <div className="chart-card-head">
             <div className="chart-card-title">Orders by Day</div>

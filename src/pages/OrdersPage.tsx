@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Download, Printer, ShoppingCart, Clock, Droplets, CheckCircle, Truck, Package } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { StatTiles } from '@/components/ui/StatTiles'
 import { adminApi } from '@/services/api'
 import { useRealtime, type OrderEventPayload } from '@/contexts/RealtimeContext'
 
@@ -95,15 +96,15 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="stat-grid">
-        {stats.map((s) => (
-          <div key={s.label} className="stat-tile" style={{ '--tile-bg': s.color, '--tile-fg': s.fg } as React.CSSProperties}>
-            <div className="st-icon"><s.icon size={16} /></div>
-            <div className="st-value">{loading ? '...' : s.value}</div>
-            <div className="st-label">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        items={stats.map((s) => ({
+          label: s.label,
+          value: loading ? '...' : s.value,
+          icon: s.icon,
+          color: s.fg,
+          bg: s.color,
+        }))}
+      />
 
       {/* Filters */}
       <div className="filters-bar">

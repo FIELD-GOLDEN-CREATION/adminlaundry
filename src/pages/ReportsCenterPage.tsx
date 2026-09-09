@@ -73,7 +73,7 @@ export default function ReportsCenterPage() {
                 <Icon size={16} style={{ color: '#64748B' }} />
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: '#2C3E50' }}>{category.name}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                 {category.reports.map((report) => (
                   <div
                     key={report.id}

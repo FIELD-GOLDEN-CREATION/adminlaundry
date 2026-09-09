@@ -5,6 +5,7 @@ import {
   Shield, Clock, Star, Package, Edit2, RotateCcw,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { StatTiles } from '@/components/ui/StatTiles'
 import { adminApi } from '@/services/api'
 
 interface StaffDetail {
@@ -262,22 +263,17 @@ export default function StaffDetailPage() {
       </div>
 
       {/* Stats */}
-      <div className="stat-grid">
-        {[
-          { label: 'Orders Checked In', value: String(staff.ordersCheckedIn), color: '#E8F2F1' },
-          { label: 'Staff Tenure', value: staff.tenure, color: '#FDF3E3' },
-          { label: 'Customer Rating', value: `${staff.rating} / 5.0`, color: '#E3EEFF' },
-          { label: 'Current Shift', value: staff.shift, color: '#F1F5F9' },
-        ].map((stat) => (
-          <div key={stat.label} className="stat-tile" style={{ '--tile-bg': stat.color } as React.CSSProperties}>
-            <div className="st-value">{stat.value}</div>
-            <div className="st-label">{stat.label}</div>
-          </div>
-        ))}
-      </div>
+      <StatTiles
+        items={[
+          { label: 'Orders Checked In', value: String(staff.ordersCheckedIn), bg: '#E8F2F1' },
+          { label: 'Staff Tenure', value: staff.tenure, bg: '#FDF3E3' },
+          { label: 'Customer Rating', value: `${staff.rating} / 5.0`, bg: '#E3EEFF' },
+          { label: 'Current Shift', value: staff.shift, bg: '#F1F5F9' },
+        ]}
+      />
 
       {/* Two column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {/* Left: Info */}
         <div className="panel" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>

@@ -412,7 +412,7 @@ export default function CategoriesItemsPage() {
                         </div>
                         {isEditingItem ? (
                           <div style={{ flex: 1 }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 100px auto auto', gap: 6, alignItems: 'center' }}>
+                            <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 100px auto auto', gap: 6, alignItems: 'center' }}>
                               <input value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Name" />
                               <input value={itemForm.description} onChange={(e) => setItemForm((p) => ({ ...p, description: e.target.value }))} style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#64748B', outline: 'none' }} placeholder="Description" />
                               <input value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: e.target.value }))} type="number" style={{ height: 30, borderRadius: 6, border: '1px solid #EDE7D9', padding: '4px 8px', fontSize: 12, color: '#2C3E50', outline: 'none' }} placeholder="Price" />
