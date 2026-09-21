@@ -185,6 +185,12 @@ export const adminApi = {
   togglePackage: (id: number | string) => {
     return api.put(`/admin/packages/${id}/toggle`)
   },
+  showPackageOnHome: (id: number | string) => {
+    return api.put(`/admin/packages/${id}/show-home`)
+  },
+  hidePackageFromHome: (id: number | string) => {
+    return api.put(`/admin/packages/${id}/hide-home`)
+  },
   deletePackage: (id: number | string) => {
     return api.delete(`/admin/packages/${id}`)
   },

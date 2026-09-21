@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Package, Search, X, Loader2, AlertCircle, Trash2, ToggleLeft, ToggleRight, Eye, Tag, ShoppingBag, Check, Info } from 'lucide-react'
+import { Package, Search, X, Loader2, AlertCircle, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Tag, ShoppingBag, Check, Info } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { adminApi } from '@/services/api'
 import { StatTiles } from '@/components/ui/StatTiles'
@@ -41,6 +41,7 @@ interface PackageData {
   note: string | null
   tag: string | null
   is_active: boolean | number
+  show_on_home: boolean | number
   order_count: number
   created_at: string
   updated_at: string
@@ -73,6 +74,7 @@ export default function PackagesPage() {
   const [selectedPkg, setSelectedPkg] = useState<PackageData | null>(null)
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [homeActionLoadingId, setHomeActionLoadingId] = useState<number | null>(null)
 
   const loadPackages = useCallback(async () => {
     try {
@@ -106,6 +108,38 @@ export default function PackagesPage() {
       // ignore
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  const handleShowOnHome = async (pkg: PackageData) => {
+    try {
+      setHomeActionLoadingId(pkg.id)
+      const res = await adminApi.showPackageOnHome(pkg.id)
+      const updated = res.data.data
+      setPackages((prev) => prev.map((p) => (p.id === pkg.id ? { ...p, ...updated } : p)))
+      if (selectedPkg?.id === pkg.id) {
+        setSelectedPkg((prev) => (prev ? { ...prev, ...updated } : null))
+      }
+    } catch {
+      // ignore
+    } finally {
+      setHomeActionLoadingId(null)
+    }
+  }
+
+  const handleHideFromHome = async (pkg: PackageData) => {
+    try {
+      setHomeActionLoadingId(pkg.id)
+      const res = await adminApi.hidePackageFromHome(pkg.id)
+      const updated = res.data.data
+      setPackages((prev) => prev.map((p) => (p.id === pkg.id ? { ...p, ...updated } : p)))
+      if (selectedPkg?.id === pkg.id) {
+        setSelectedPkg((prev) => (prev ? { ...prev, ...updated } : null))
+      }
+    } catch {
+      // ignore
+    } finally {
+      setHomeActionLoadingId(null)
     }
   }
 
@@ -392,6 +426,45 @@ export default function PackagesPage() {
                         {isActive ? 'Active' : 'Inactive'}
                       </span>
                       <span style={{ fontSize: 10, color: '#94A3B8', marginLeft: 'auto' }}>{pkg.order_count} orders</span>
+                    </div>
+
+                    {/* Home-screen visibility controls — independent of
+                        Active/Inactive: this decides whether the package is
+                        featured on the customer home screen's cross-vendor
+                        carousel, not whether it's orderable on the shop page. */}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      {!pkg.show_on_home && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleShowOnHome(pkg) }}
+                          disabled={homeActionLoadingId === pkg.id}
+                          style={{
+                            flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                            padding: '6px 12px', fontSize: 11.5, fontWeight: 700,
+                            color: '#fff', background: '#1A7A5C', border: 'none', borderRadius: 7,
+                            cursor: homeActionLoadingId === pkg.id ? 'default' : 'pointer',
+                            opacity: homeActionLoadingId === pkg.id ? 0.6 : 1,
+                          }}
+                        >
+                          {homeActionLoadingId === pkg.id ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Eye size={13} />}
+                          Show in Home Screen
+                        </button>
+                      )}
+                      {!!pkg.show_on_home && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleHideFromHome(pkg) }}
+                          disabled={homeActionLoadingId === pkg.id}
+                          style={{
+                            flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                            padding: '6px 12px', fontSize: 11.5, fontWeight: 700,
+                            color: '#64748B', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: 7,
+                            cursor: homeActionLoadingId === pkg.id ? 'default' : 'pointer',
+                            opacity: homeActionLoadingId === pkg.id ? 0.6 : 1,
+                          }}
+                        >
+                          {homeActionLoadingId === pkg.id ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <EyeOff size={13} />}
+                          Hide from Home Screen
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
