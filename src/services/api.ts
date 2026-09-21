@@ -87,11 +87,11 @@ export const adminApi = {
     const params = status && status !== 'all' ? { status } : {}
     return api.get('/admin/reviews', { params })
   },
-  approveReview: (id: number | string) => {
-    return api.put(`/admin/reviews/${id}/approve`)
+  showReviewOnHome: (id: number | string) => {
+    return api.put(`/admin/reviews/${id}/show`)
   },
-  rejectReview: (id: number | string, note?: string) => {
-    return api.put(`/admin/reviews/${id}/reject`, note ? { note } : undefined)
+  hideReviewFromHome: (id: number | string) => {
+    return api.put(`/admin/reviews/${id}/hide`)
   },
 
   // Promos
