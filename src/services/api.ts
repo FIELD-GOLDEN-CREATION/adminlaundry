@@ -83,8 +83,15 @@ export const adminApi = {
   },
 
   // Reviews
-  getReviews: () => {
-    return api.get('/admin/reviews')
+  getReviews: (status?: string) => {
+    const params = status && status !== 'all' ? { status } : {}
+    return api.get('/admin/reviews', { params })
+  },
+  approveReview: (id: number | string) => {
+    return api.put(`/admin/reviews/${id}/approve`)
+  },
+  rejectReview: (id: number | string, note?: string) => {
+    return api.put(`/admin/reviews/${id}/reject`, note ? { note } : undefined)
   },
 
   // Promos

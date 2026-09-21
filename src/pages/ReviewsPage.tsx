@@ -1,16 +1,31 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Sun, CalendarDays, CalendarRange, RefreshCw, Trophy } from 'lucide-react'
+import { Star, Sun, CalendarDays, CalendarRange, RefreshCw, Trophy, ShieldAlert, Check, X, Loader2 } from 'lucide-react'
 import { adminApi } from '@/services/api'
+
+type ModerationStatus = 'pending' | 'approved' | 'rejected'
 
 interface AdminReview {
   id: number | string
   rating: number
   comment?: string | null
   created_at: string
+  status: ModerationStatus
+  moderated_at?: string | null
+  moderation_note?: string | null
+  moderator?: { id?: number; name?: string } | null
   customer?: { id?: number; name?: string }
   shop?: { id?: number; name?: string }
 }
+
+type StatusFilterKey = 'all' | ModerationStatus
+
+const statusTabs: { key: StatusFilterKey; label: string }[] = [
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+  { key: 'all', label: 'All statuses' },
+]
 
 type FilterKey = 'all' | '5' | '4' | '3' | '2' | '1' | 'today' | 'week' | 'month'
 
@@ -36,6 +51,12 @@ const ratingColors: Record<number, string> = {
   1: '#C0553F',
 }
 
+const statusMeta: Record<ModerationStatus, { label: string; color: string; bg: string; border: string }> = {
+  pending: { label: 'Pending review', color: '#B7791F', bg: '#FDF3E3', border: '#F3E4C4' },
+  approved: { label: 'Approved', color: '#1A7A5C', bg: '#E8F5F0', border: '#CDE9DC' },
+  rejected: { label: 'Rejected', color: '#C0553F', bg: '#FBEAE6', border: '#F0CFC6' },
+}
+
 function startOfDay(d: Date) {
   const x = new Date(d)
   x.setHours(0, 0, 0, 0)
@@ -57,13 +78,28 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterKey>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilterKey>('pending')
   const [search, setSearch] = useState('')
+  const [actionLoadingId, setActionLoadingId] = useState<AdminReview['id'] | null>(null)
+  const [rejectingId, setRejectingId] = useState<AdminReview['id'] | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
+  const hasAutoSelectedStatus = useRef(false)
 
   const load = useCallback(async () => {
     try {
       setError(null)
       const res = await adminApi.getReviews()
-      setReviews(res.data.data || [])
+      const data: AdminReview[] = res.data.data || []
+      setReviews(data)
+      // Land on the moderation queue only when there's actually a backlog;
+      // otherwise default to the full list, and only do this once so a
+      // manual tab switch by the admin is never overridden on refresh.
+      if (!hasAutoSelectedStatus.current) {
+        hasAutoSelectedStatus.current = true
+        if (!data.some((r) => r.status === 'pending')) {
+          setStatusFilter('all')
+        }
+      }
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to load reviews')
     } finally {
@@ -76,15 +112,50 @@ export default function ReviewsPage() {
     load()
   }, [load])
 
-  const { todayCount, weekCount, monthCount, avgRating, distribution, topVendor } = useMemo(() => {
+  const handleApprove = useCallback(async (id: AdminReview['id']) => {
+    setActionLoadingId(id)
+    try {
+      await adminApi.approveReview(id)
+      setReviews((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: 'approved', moderation_note: null } : r))
+      )
+      setRejectingId(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to approve review')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [])
+
+  const handleReject = useCallback(async (id: AdminReview['id'], note: string) => {
+    setActionLoadingId(id)
+    try {
+      await adminApi.rejectReview(id, note.trim() || undefined)
+      setReviews((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: 'rejected', moderation_note: note.trim() || null } : r))
+      )
+      setRejectingId(null)
+      setRejectNote('')
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to reject review')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }, [])
+
+  const { todayCount, weekCount, monthCount, pendingCount, approvedCount, avgRating, distribution, topVendor } = useMemo(() => {
     const now = new Date()
     const dayStart = startOfDay(now)
     const weekStart = startOfWeek(now)
     const monthStart = startOfMonth(now)
 
-    let today = 0, week = 0, month = 0, ratingSum = 0
+    // Incoming volume (today/week/month/pending) counts every submission
+    // regardless of moderation status — rating stats below only count
+    // approved reviews, since those are what's actually public.
+    let today = 0, week = 0, month = 0, pending = 0, ratingSum = 0
     const dist: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
     const vendorStats = new Map<string, { name: string; id?: number; sum: number; count: number }>()
+    const approved = reviews.filter((r) => r.status === 'approved')
 
     for (const r of reviews) {
       const created = r.created_at ? new Date(r.created_at) : null
@@ -93,6 +164,10 @@ export default function ReviewsPage() {
         if (created >= weekStart) week++
         if (created >= monthStart) month++
       }
+      if (r.status === 'pending') pending++
+    }
+
+    for (const r of approved) {
       const rating = Number(r.rating) || 0
       ratingSum += rating
       if (dist[rating] !== undefined) dist[rating]++
@@ -119,14 +194,27 @@ export default function ReviewsPage() {
       todayCount: today,
       weekCount: week,
       monthCount: month,
-      avgRating: reviews.length ? ratingSum / reviews.length : 0,
+      pendingCount: pending,
+      approvedCount: approved.length,
+      avgRating: approved.length ? ratingSum / approved.length : 0,
       distribution: dist,
       topVendor: best,
     }
   }, [reviews])
 
+  const statusCounts: Record<StatusFilterKey, number> = useMemo(() => {
+    const counts: Record<StatusFilterKey, number> = { all: reviews.length, pending: 0, approved: 0, rejected: 0 }
+    for (const r of reviews) {
+      if (r.status && counts[r.status] !== undefined) counts[r.status]++
+    }
+    return counts
+  }, [reviews])
+
   const filtered = useMemo(() => {
     let list = reviews
+    if (statusFilter !== 'all') {
+      list = list.filter((r) => r.status === statusFilter)
+    }
     if (filter !== 'all') {
       if (['5', '4', '3', '2', '1'].includes(filter)) {
         const rating = Number(filter)
@@ -146,7 +234,7 @@ export default function ReviewsPage() {
       )
     }
     return list
-  }, [reviews, filter, search])
+  }, [reviews, statusFilter, filter, search])
 
   const counts: Record<FilterKey, number> = {
     all: reviews.length,
@@ -174,12 +262,13 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Today / Week / Month / Average cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
+      {/* Today / Week / Month / Pending / Average cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0,1fr))', gap: 14 }}>
         {[
           { label: "Today's Reviews", value: todayCount, icon: Sun, color: '#D4841A' },
           { label: "This Week's Reviews", value: weekCount, icon: CalendarDays, color: '#1F5ECC' },
           { label: "This Month's Reviews", value: monthCount, icon: CalendarRange, color: '#1A5C58' },
+          { label: 'Pending Moderation', value: pendingCount, icon: ShieldAlert, color: '#C0553F' },
           { label: 'Average Rating', value: `${avgRating.toFixed(1)} / 5.0`, icon: Star, color: '#7C3AED' },
         ].map((kpi) => (
           <div key={kpi.label} className="panel" style={{ padding: 16 }}>
@@ -212,7 +301,7 @@ export default function ReviewsPage() {
         }}>
           <div>
             <div className="panel-title">Rating Distribution</div>
-            <div className="panel-sub">{reviews.length} reviews across all vendors</div>
+            <div className="panel-sub">{approvedCount} approved reviews across all vendors</div>
           </div>
           {topVendor && (
             <Link
@@ -237,7 +326,7 @@ export default function ReviewsPage() {
         <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[5, 4, 3, 2, 1].map((star) => {
             const count = distribution[star] || 0
-            const pct = reviews.length ? (count / reviews.length) * 100 : 0
+            const pct = approvedCount ? (count / approvedCount) * 100 : 0
             return (
               <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, width: 40, flexShrink: 0 }}>
@@ -265,6 +354,35 @@ export default function ReviewsPage() {
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
         </svg>
         <input placeholder="Search by vendor, customer, or comment..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
+      {/* Moderation status tabs */}
+      <div className="filters-bar">
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                color: statusFilter === tab.key ? statusMeta[tab.key === 'all' ? 'approved' : tab.key].color : '#64748B',
+                background: statusFilter === tab.key ? statusMeta[tab.key === 'all' ? 'approved' : tab.key].bg : 'transparent',
+                border: statusFilter === tab.key ? `1px solid ${statusMeta[tab.key === 'all' ? 'approved' : tab.key].border}` : '1px solid transparent',
+                borderRadius: 999, cursor: 'pointer',
+              }}
+            >
+              {tab.label}
+              <span style={{
+                padding: '1px 6px', borderRadius: 999, fontSize: 10.5, fontWeight: 700,
+                background: statusFilter === tab.key ? 'rgba(255,255,255,0.6)' : '#F1F5F9',
+                color: 'inherit',
+              }}>
+                {statusCounts[tab.key]}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Filter chips */}
@@ -315,6 +433,9 @@ export default function ReviewsPage() {
         ) : (
           filtered.map((review) => {
             const accent = ratingColors[Number(review.rating)] || '#94A3B8'
+            const meta = statusMeta[review.status] || statusMeta.approved
+            const isActing = actionLoadingId === review.id
+            const isRejecting = rejectingId === review.id
             return (
               <div key={review.id} className="panel" style={{ padding: 16, borderLeft: `3px solid ${accent}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -322,7 +443,15 @@ export default function ReviewsPage() {
                     {(review.customer?.name || '?').charAt(0)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{review.customer?.name || 'Anonymous'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{review.customer?.name || 'Anonymous'}</div>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700,
+                        color: meta.color, background: meta.bg, border: `1px solid ${meta.border}`,
+                      }}>
+                        {meta.label}
+                      </span>
+                    </div>
                     <div style={{ fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
                       {review.shop?.id ? (
                         <Link to={`/members/vendors/${review.shop.id}`} style={{ fontWeight: 600, color: '#1A5C58', textDecoration: 'none' }}>
@@ -348,6 +477,89 @@ export default function ReviewsPage() {
                   <p style={{ fontSize: 13, color: '#2C3E50', margin: 0, lineHeight: 1.6 }}>
                     {review.comment}
                   </p>
+                )}
+                {review.status === 'rejected' && review.moderation_note && (
+                  <p style={{ fontSize: 12, color: '#C0553F', margin: '8px 0 0', lineHeight: 1.5, fontStyle: 'italic' }}>
+                    Rejection note: {review.moderation_note}
+                  </p>
+                )}
+                {review.status !== 'pending' && review.moderator?.name && (
+                  <p style={{ fontSize: 11, color: '#94A3B8', margin: '6px 0 0' }}>
+                    {review.status === 'approved' ? 'Approved' : 'Rejected'} by {review.moderator.name}
+                    {review.moderated_at ? ` · ${new Date(review.moderated_at).toLocaleString()}` : ''}
+                  </p>
+                )}
+
+                {/* Moderation actions */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {review.status !== 'approved' && (
+                    <button
+                      onClick={() => handleApprove(review.id)}
+                      disabled={isActing}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                        color: '#fff', background: '#1A7A5C', border: 'none', borderRadius: 7,
+                        cursor: isActing ? 'default' : 'pointer', opacity: isActing ? 0.6 : 1,
+                      }}
+                    >
+                      {isActing ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={13} />}
+                      Approve
+                    </button>
+                  )}
+                  {review.status !== 'rejected' && (
+                    <button
+                      onClick={() => { setRejectingId(isRejecting ? null : review.id); setRejectNote('') }}
+                      disabled={isActing}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                        color: '#C0553F', background: '#FBEAE6', border: '1px solid #F0CFC6', borderRadius: 7,
+                        cursor: isActing ? 'default' : 'pointer', opacity: isActing ? 0.6 : 1,
+                      }}
+                    >
+                      <X size={13} />
+                      Reject
+                    </button>
+                  )}
+                  {review.status === 'approved' && (
+                    <span style={{ fontSize: 11, color: '#94A3B8' }}>Live on the customer app</span>
+                  )}
+                </div>
+
+                {isRejecting && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                    <input
+                      autoFocus
+                      placeholder="Optional reason (internal, sent to the customer)..."
+                      value={rejectNote}
+                      onChange={(e) => setRejectNote(e.target.value)}
+                      style={{
+                        flex: 1, fontSize: 12, padding: '7px 10px', borderRadius: 7,
+                        border: '1px solid #E2E8F0',
+                      }}
+                    />
+                    <button
+                      onClick={() => handleReject(review.id, rejectNote)}
+                      disabled={isActing}
+                      style={{
+                        padding: '7px 12px', fontSize: 12, fontWeight: 700,
+                        color: '#fff', background: '#C0553F', border: 'none', borderRadius: 7,
+                        cursor: isActing ? 'default' : 'pointer', opacity: isActing ? 0.6 : 1,
+                      }}
+                    >
+                      Confirm reject
+                    </button>
+                    <button
+                      onClick={() => setRejectingId(null)}
+                      style={{
+                        padding: '7px 12px', fontSize: 12, fontWeight: 600,
+                        color: '#64748B', background: 'transparent', border: 'none', borderRadius: 7, cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 )}
               </div>
             )
