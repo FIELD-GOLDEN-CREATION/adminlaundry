@@ -42,6 +42,7 @@ interface PackageData {
   tag: string | null
   is_active: boolean | number
   show_on_home: boolean | number
+  home_hidden_by_plan?: boolean
   order_count: number
   created_at: string
   updated_at: string
@@ -466,6 +467,20 @@ export default function PackagesPage() {
                         </button>
                       )}
                     </div>
+
+                      {/* Hidden from app home by vendor's plan */}
+                      {pkg.home_hidden_by_plan && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '8px 12px', borderRadius: 10, marginTop: 8,
+                          background: '#FDF3E3',
+                        }}>
+                          <EyeOff size={12} style={{ color: '#D4841A', flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#D4841A' }}>
+                            Hidden from app home · vendor's plan
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               )
@@ -708,6 +723,19 @@ export default function PackagesPage() {
               </div>
 
               {/* Action buttons */}
+              {selectedPkg.home_hidden_by_plan && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+                  background: '#FDF3E3', border: '1px solid #F5D9A8',
+                }}>
+                  <EyeOff size={14} style={{ color: '#D4841A', flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ fontSize: 12, color: '#92600A', lineHeight: 1.5 }}>
+                    Hidden from the app home page because the vendor's plan has home visibility off.
+                    Change it from the Subscriptions page — the package itself stays active.
+                  </span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button
                   onClick={() => handleToggle(selectedPkg)}

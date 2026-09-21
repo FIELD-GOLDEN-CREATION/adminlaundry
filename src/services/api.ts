@@ -115,6 +115,12 @@ export const adminApi = {
   getSubscriptions: () => {
     return api.get('/admin/subscriptions')
   },
+  getSubscriptionPlans: () => {
+    return api.get('/admin/subscription-plans')
+  },
+  updateSubscriptionPlan: (id: number | string, data: Record<string, unknown>) => {
+    return api.put(`/admin/subscription-plans/${id}`, data)
+  },
 
   // Notifications
   getNotifications: (params?: { type?: string; event?: string; unread?: boolean; page?: number; limit?: number }) => {

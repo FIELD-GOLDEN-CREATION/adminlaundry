@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { CreditCard, Save, RotateCcw } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CreditCard, Save, RotateCcw, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 import { StatTiles } from '@/components/ui/StatTiles'
+import { adminApi } from '@/services/api'
 
 interface PlanLimit {
   key: string
@@ -17,6 +18,14 @@ interface SubscriptionPlan {
   color: string
   highlighted: boolean
   limits: PlanLimit[]
+}
+
+interface ServerPlan {
+  id: number
+  name: string
+  display_name?: string
+  show_on_home?: boolean
+  active_vendors_count?: number
 }
 
 const defaultPlans: SubscriptionPlan[] = [
@@ -81,6 +90,64 @@ export default function SubscriptionsPage() {
   const [editingPlan, setEditingPlan] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<SubscriptionPlan | null>(null)
 
+  // Server-backed home visibility per plan (keyed by plan name, e.g. 'pro').
+  // Defaults to visible until the real plans load.
+  const [homeVisible, setHomeVisible] = useState<Record<string, boolean>>({
+    basic: true,
+    pro: true,
+    enterprise: true,
+  })
+  const [serverPlanIds, setServerPlanIds] = useState<Record<string, number>>({})
+  const [vendorCounts, setVendorCounts] = useState<Record<string, number>>({})
+  const [savingHome, setSavingHome] = useState<string | null>(null)
+  const [homeError, setHomeError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    adminApi
+      .getSubscriptionPlans()
+      .then((res) => {
+        if (cancelled) return
+        const list = (res.data?.data ?? []) as ServerPlan[]
+        const vis: Record<string, boolean> = {}
+        const ids: Record<string, number> = {}
+        const counts: Record<string, number> = {}
+        for (const p of list) {
+          const key = String(p.name ?? '').toLowerCase()
+          if (!key) continue
+          vis[key] = p.show_on_home ?? true
+          ids[key] = p.id
+          if (typeof p.active_vendors_count === 'number') counts[key] = p.active_vendors_count
+        }
+        setHomeVisible((prev) => ({ ...prev, ...vis }))
+        setServerPlanIds(ids)
+        setVendorCounts(counts)
+      })
+      .catch(() => {
+        if (!cancelled) setHomeError('Could not load plan visibility from the server.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const toggleHomeVisibility = async (planId: string) => {
+    const next = !homeVisible[planId]
+    setHomeVisible((prev) => ({ ...prev, [planId]: next }))
+    setHomeError(null)
+    const serverId = serverPlanIds[planId]
+    if (serverId == null) return
+    try {
+      setSavingHome(planId)
+      await adminApi.updateSubscriptionPlan(serverId, { show_on_home: next })
+    } catch {
+      setHomeVisible((prev) => ({ ...prev, [planId]: !next }))
+      setHomeError('Could not save home visibility. Check connection and retry.')
+    } finally {
+      setSavingHome(null)
+    }
+  }
+
   const startEdit = (planId: string) => {
     const plan = plans.find((p) => p.id === planId)
     if (plan) {
@@ -126,6 +193,16 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Plans grid */}
+      {homeError && (
+        <div className="panel" style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 16px', marginBottom: 14,
+          background: '#FEE2E2', border: '1px solid #FECACA',
+          fontSize: 12.5, fontWeight: 600, color: '#B91C1C',
+        }}>
+          <AlertCircle size={14} /> {homeError}
+        </div>
+      )}
       <div className="stack-sm" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
@@ -134,6 +211,7 @@ export default function SubscriptionsPage() {
         {plans.map((plan) => {
           const isEditing = editingPlan === plan.id
           const draft = isEditing ? editDraft! : plan
+          const hv = homeVisible[plan.id] ?? true
 
           return (
             <div
@@ -248,6 +326,40 @@ export default function SubscriptionsPage() {
                 </div>
               </div>
 
+              {/* App home visibility */}
+              <div style={{ padding: '0 20px 16px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '10px 12px', borderRadius: 12,
+                  background: hv ? '#DFF5ED' : '#F5F0E8',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {hv
+                      ? <Eye size={14} style={{ color: '#1A7A5C', flexShrink: 0 }} />
+                      : <EyeOff size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#2C3E50' }}>
+                        App home page {savingHome === plan.id && <Loader2 size={12} style={{ display: 'inline', verticalAlign: 'middle', animation: 'spin 1s linear infinite' }} />}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.4 }}>
+                        {hv
+                          ? 'Packages of vendors on this plan show in the app home'
+                          : 'Hidden — packages still work, not shown on home'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleHomeVisibility(plan.id)}
+                    disabled={savingHome === plan.id}
+                    title={hv ? 'Hide plan packages from app home' : 'Show plan packages on app home'}
+                    className={`toggle ${hv ? 'on' : ''}`}
+                    style={{ flexShrink: 0, opacity: savingHome === plan.id ? 0.6 : 1 }}
+                  >
+                    <div className="toggle-knob" />
+                  </button>
+                </div>
+              </div>
+
               {/* Actions */}
               <div style={{ padding: '0 20px 20px', display: 'flex', gap: 8 }}>
                 {isEditing ? (
@@ -301,7 +413,7 @@ export default function SubscriptionsPage() {
         </div>
         <StatTiles
           items={plans.map((plan) => {
-            const vendorCount = plan.id === 'basic' ? 12 : plan.id === 'pro' ? 24 : 6
+            const vendorCount = vendorCounts[plan.id] ?? (plan.id === 'basic' ? 12 : plan.id === 'pro' ? 24 : 6)
             return {
               label: plan.name,
               value: vendorCount,
