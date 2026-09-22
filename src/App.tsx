@@ -25,6 +25,7 @@ import RequestsPage from '@/pages/RequestsPage'
 import ReviewsPage from '@/pages/ReviewsPage'
 import NotificationsPage from '@/pages/NotificationsPage'
 import SubscriptionsPage from '@/pages/SubscriptionsPage'
+import SmsPage from '@/pages/SmsPage'
 import StaffSettingsPage from '@/pages/StaffSettingsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { VendorApplicationProvider } from '@/contexts/VendorApplicationContext'
@@ -53,7 +54,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>
 }
 
-const staffRestrictedPaths = ['/reports', '/subscriptions', '/settings']
+const staffRestrictedPaths = ['/reports', '/subscriptions', '/settings', '/sms']
 const staffRestrictedMemberPaths = ['/members/staff']
 
 function StaffRoute({ children }: { children: React.ReactNode }) {
@@ -267,6 +268,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <StaffRoute><SubscriptionsPage /></StaffRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sms"
+        element={
+          <ProtectedRoute>
+            <StaffRoute><SmsPage /></StaffRoute>
           </ProtectedRoute>
         }
       />

@@ -18,6 +18,7 @@ import {
   Bell,
   CreditCard,
   Star,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -50,6 +51,7 @@ const allNavItems = [
   },
   { path: '/reports', label: 'Reports', icon: FileText, roles: ['admin'] },
   { path: '/subscriptions', label: 'Subscriptions', icon: CreditCard, roles: ['admin'] },
+  { path: '/sms', label: 'SMS', icon: MessageSquare, roles: ['admin'] },
   { path: '/notifications', label: 'Notifications', icon: Bell, roles: ['admin', 'staff'] },
   { path: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
   { path: '/staff-settings', label: 'Settings', icon: Settings, roles: ['staff'] },

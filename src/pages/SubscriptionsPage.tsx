@@ -25,6 +25,8 @@ interface ServerPlan {
   name: string
   display_name?: string
   show_on_home?: boolean
+  sms_enabled?: boolean
+  sms_quota?: number
   active_vendors_count?: number
 }
 
@@ -102,6 +104,11 @@ export default function SubscriptionsPage() {
   const [savingHome, setSavingHome] = useState<string | null>(null)
   const [homeError, setHomeError] = useState<string | null>(null)
 
+  // Server-backed automated-SMS access per plan.
+  const [smsEnabled, setSmsEnabled] = useState<Record<string, boolean>>({})
+  const [smsQuota, setSmsQuota] = useState<Record<string, number>>({})
+  const [savingSms, setSavingSms] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     adminApi
@@ -112,16 +119,22 @@ export default function SubscriptionsPage() {
         const vis: Record<string, boolean> = {}
         const ids: Record<string, number> = {}
         const counts: Record<string, number> = {}
+        const sms: Record<string, boolean> = {}
+        const quota: Record<string, number> = {}
         for (const p of list) {
           const key = String(p.name ?? '').toLowerCase()
           if (!key) continue
           vis[key] = p.show_on_home ?? true
           ids[key] = p.id
           if (typeof p.active_vendors_count === 'number') counts[key] = p.active_vendors_count
+          if (typeof p.sms_enabled === 'boolean') sms[key] = p.sms_enabled
+          if (typeof p.sms_quota === 'number') quota[key] = p.sms_quota
         }
         setHomeVisible((prev) => ({ ...prev, ...vis }))
         setServerPlanIds(ids)
         setVendorCounts(counts)
+        setSmsEnabled((prev) => ({ ...prev, ...sms }))
+        setSmsQuota((prev) => ({ ...prev, ...quota }))
       })
       .catch(() => {
         if (!cancelled) setHomeError('Could not load plan visibility from the server.')
@@ -131,8 +144,7 @@ export default function SubscriptionsPage() {
     }
   }, [])
 
-  const toggleHomeVisibility = async (planId: string) => {
-    const next = !homeVisible[planId]
+  const toggleHomeVisibility = async (planId: string) => {    const next = !homeVisible[planId]
     setHomeVisible((prev) => ({ ...prev, [planId]: next }))
     setHomeError(null)
     const serverId = serverPlanIds[planId]
@@ -145,6 +157,36 @@ export default function SubscriptionsPage() {
       setHomeError('Could not save home visibility. Check connection and retry.')
     } finally {
       setSavingHome(null)
+    }
+  }
+
+  const toggleSmsEnabled = async (planId: string) => {
+    const next = !(smsEnabled[planId] ?? false)
+    setSmsEnabled((prev) => ({ ...prev, [planId]: next }))
+    setHomeError(null)
+    const serverId = serverPlanIds[planId]
+    if (serverId == null) return
+    try {
+      setSavingSms(planId)
+      await adminApi.updateSubscriptionPlan(serverId, { sms_enabled: next })
+    } catch {
+      setSmsEnabled((prev) => ({ ...prev, [planId]: !next }))
+      setHomeError('Could not save SMS access. Check connection and retry.')
+    } finally {
+      setSavingSms(null)
+    }
+  }
+
+  const saveSmsQuota = async (planId: string) => {
+    const serverId = serverPlanIds[planId]
+    if (serverId == null) return
+    try {
+      setSavingSms(planId)
+      await adminApi.updateSubscriptionPlan(serverId, { sms_quota: smsQuota[planId] ?? 0 })
+    } catch {
+      setHomeError('Could not save SMS quota. Check connection and retry.')
+    } finally {
+      setSavingSms(null)
     }
   }
 
@@ -354,6 +396,51 @@ export default function SubscriptionsPage() {
                     title={hv ? 'Hide plan packages from app home' : 'Show plan packages on app home'}
                     className={`toggle ${hv ? 'on' : ''}`}
                     style={{ flexShrink: 0, opacity: savingHome === plan.id ? 0.6 : 1 }}
+                  >
+                    <div className="toggle-knob" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Automated SMS access */}
+              <div style={{ padding: '0 20px 16px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '10px 12px', borderRadius: 12,
+                  background: smsEnabled[plan.id] ? '#DFF5ED' : '#F5F0E8',
+                }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#2C3E50' }}>
+                      Automated SMS {savingSms === plan.id && <Loader2 size={12} style={{ display: 'inline', verticalAlign: 'middle', animation: 'spin 1s linear infinite' }} />}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.4 }}>
+                      {smsEnabled[plan.id]
+                        ? 'Vendors on this plan may send order/package/promo SMS'
+                        : 'Vendors on this plan cannot send SMS'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>Quota/mo:</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={smsQuota[plan.id] ?? ''}
+                        placeholder="0"
+                        onChange={(e) => setSmsQuota((prev) => ({ ...prev, [plan.id]: Number(e.target.value) }))}
+                        onBlur={() => saveSmsQuota(plan.id)}
+                        style={{
+                          width: 70, height: 28, borderRadius: 8, border: '1px solid #EDE7D9',
+                          padding: '4px 8px', fontSize: 12.5, fontWeight: 700, color: '#2C3E50',
+                          background: '#FFFFFF', outline: 'none', textAlign: 'center',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleSmsEnabled(plan.id)}
+                    disabled={savingSms === plan.id}
+                    title={smsEnabled[plan.id] ? 'Disable automated SMS for this plan' : 'Enable automated SMS for this plan'}
+                    className={`toggle ${smsEnabled[plan.id] ? 'on' : ''}`}
+                    style={{ flexShrink: 0, opacity: savingSms === plan.id ? 0.6 : 1 }}
                   >
                     <div className="toggle-knob" />
                   </button>

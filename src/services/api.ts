@@ -122,6 +122,27 @@ export const adminApi = {
     return api.put(`/admin/subscription-plans/${id}`, data)
   },
 
+  // SMS administration
+  getSmsOverview: () => {
+    return api.get('/admin/sms/overview')
+  },
+  getSmsMessages: (params?: { shop_id?: number; type?: string; credit_source?: string; status?: string; page?: number }) => {
+    return api.get('/admin/sms/messages', { params })
+  },
+  getSmsRequests: (status?: string) => {
+    const params = status && status !== 'all' ? { status } : {}
+    return api.get('/admin/sms/requests', { params })
+  },
+  approveSmsRequest: (id: number | string, count?: number) => {
+    return api.post(`/admin/sms/requests/${id}/approve`, count != null ? { count } : {})
+  },
+  rejectSmsRequest: (id: number | string) => {
+    return api.post(`/admin/sms/requests/${id}/reject`)
+  },
+  adjustShopSms: (shopId: number | string, amount: number, note?: string) => {
+    return api.post(`/admin/shops/${shopId}/sms-adjust`, { amount, note })
+  },
+
   // Notifications
   getNotifications: (params?: { type?: string; event?: string; unread?: boolean; page?: number; limit?: number }) => {
     return api.get('/admin/notifications', { params })
